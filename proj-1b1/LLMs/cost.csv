@@ -1,0 +1,8 @@
+timestamp,llm,mode,input_tokens,output_tokens,unit_cost_in,unit_cost_out,est_cost_usd,notes2025-09-07T23:23:44,ChatGPT,zero,648,6119,,,,model=gpt-5
+
+2025-09-07T23:40:09,ChatGPT,zero,646,5116,,,,model=gpt-5
+2025-09-07T23:42:20,ChatGPT,careful,910,7829,,,,model=gpt-5
+2025-09-07T23:43:44,ChatGPT,missing,2657,6194,,,,model=gpt-5
+2025-09-07T23:51:26,Claude,zero,749,2881,,,,model=claude-opus-4-1-20250805
+2025-09-07T23:52:57,Claude,careful,1058,4000,,,,model=claude-opus-4-1-20250805
+2025-09-07T23:53:10,Claude,missing,3078,471,,,,model=claude-opus-4-1-20250805
