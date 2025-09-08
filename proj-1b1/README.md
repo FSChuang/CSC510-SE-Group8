@@ -28,12 +28,12 @@ This repository contains the deliverables and supporting workflow for **Project 
 ---
 
 ## Repository Structure
-
+```
 proj-1b1/
 ├── LLMs/ # Working directory with prompts, scripts, and raw outputs
 ├── p1b1.pdf # Final deliverable with 30+ curated use cases
 └── README.md # Project documentation (this file)
-
+```
 
 ---
 
