@@ -5,7 +5,7 @@ This repository contains the full workflow for generating, analyzing, and curati
 ---
 
 ## Directory Structure
-
+"
 LLMs/
 ├── Materials/ # Context materials provided to LLMs
 │ └── Materials.md # WolfCafe system description + tax/health rules
@@ -38,7 +38,7 @@ LLMs/
 ├── Reflection.md # Half-page reflection comparing models/prompts
 ├── Cost.csv # Token/cost log
 └── README.md # This file
-
+"
 ---
 
 ## Setup
