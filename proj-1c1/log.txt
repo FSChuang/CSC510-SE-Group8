@@ -1,0 +1,170 @@
+===========================================
+Prompt History Log – Project 1c1
+WolfCafe MVP (1b2) – Brainstorming Sessions
+===========================================
+
+Group 08
+September 2025
+
+===========================================
+Session 1 – Ground Rules
+===========================================
+
+User Prompt:
+"For this task, you are not allowed to give me vague summaries. You must be precise and concise. Every answer should be structured in use case format: Preconditions, Main Flow (numbered), Subflows (lettered), Alternative Flows (lettered). No filler text, no reasoning paragraphs. Stop talking nonsense."
+
+ChatGPT Response:
+"Understood. I will only return structured use cases in the format requested. Please specify the scope of the use cases to begin with."
+
+===========================================
+Session 2 – First Attempt at Narrowing
+===========================================
+
+User Prompt:
+"In Project 1b1, we built 30 use cases for WolfCafe. For 1b2 we need only 10 for the MVP. Select 15–20 of the strongest candidates for MVP, focusing on core workflows like customer ordering, card payment, preparation, and delivery. Exclude taxation, SNAP/EBT, and heavy admin."
+
+ChatGPT Response:
+"Here are 18 candidate MVP use cases:
+
+1. Web Order of Prepared Meal with Card  
+2. Mobile Order with Dietary Supplements (Card)  
+3. Promotions at Checkout  
+4. Modify or Cancel Order Before Preparation  
+5. Kitchen Fulfillment Through Delivery Completion  
+6. Kiosk Quick Order and Pickup  
+7. Customer Schedules Future Delivery  
+8. Staff Updates Preparation Time  
+9. Customer Provides Delivery Instructions  
+10. Tip Add/Adjust After Delivery  
+11. Card-Based Refunds  
+12. Allergen Incident Handling  
+13. Admin Updates Menu Pricing  
+14. Customer Schedules Pickup  
+15. Split Payment (Card + Cash)  
+16. In-Route Delivery Change  
+17. Inventory Thresholds  
+18. Tax Holiday Exemptions"
+
+User Prompt:
+"This is not acceptable. You included refunds, allergens, split payments, and tax holidays, which I told you to exclude. Redo it and be strict this time."
+
+ChatGPT Response:
+"Refined list to 15 cases. Excluded refunds, allergens, split payments, and tax holidays. Remaining cases emphasize core flows: order placement, promotions, cancelation, fulfillment, kiosk, scheduling, delay management, delivery instructions, tipping, and customer pickup."
+
+===========================================
+Session 3 – Parallel Run with Claude
+===========================================
+
+User Prompt:
+"Claude, same assignment. Pick 15–20 best MVP use cases directly from the 1b1 file. Stay focused on customer-facing essentials. Exclude taxation, SNAP/EBT, and admin overhead. Format in the same structure."
+
+Claude Response:
+"Here are 16 candidate cases:
+
+- Web Order of Prepared Meal with Card  
+- Mobile Order with Card  
+- Promotions at Checkout  
+- Cancel Before Preparation  
+- Kitchen Fulfillment to Delivery  
+- Kiosk Quick Order  
+- Scheduled Delivery  
+- Staff Delay Management  
+- Customer Delivery Instructions  
+- Tip Adjustment After Delivery  
+- In-Route Delivery Change  
+- Allergen Incident Handling  
+- Cross-Jurisdiction Tax Handling  
+- Refund After Delivery  
+- Staff Scheduling  
+- Coupon Abuse Investigation"
+
+User Prompt:
+"This still includes allergens, refunds, tax. I said exclude those. Be more careful."
+
+Claude Response:
+"Filtered list to 14 cases, removing non-MVP items. Overlaps with ChatGPT’s refined list include: ordering by card, promotions, cancelation, kitchen fulfillment, kiosk quick order, scheduling, delay management, instructions, tipping."
+
+===========================================
+Session 4 – Overlap Analysis
+===========================================
+
+User Prompt:
+"Compare both lists. Give me only the overlaps between ChatGPT’s 15 and Claude’s 14. That will be our MVP."
+
+ChatGPT Response:
+"Both systems consistently highlighted 10 overlapping use cases:
+
+1. Web Order of Prepared Meal with Card  
+2. Mobile Order with Dietary Supplements (Card)  
+3. Promotions at Checkout  
+4. Modify or Cancel Order Before Preparation  
+5. Kitchen Fulfillment Through Delivery Completion  
+6. Kiosk Quick Order and Pickup  
+7. Customer Schedules Future Delivery  
+8. Staff Updates Preparation Time (Delay Management)  
+9. Customer Provides Delivery Instructions  
+10. Tip Add/Adjust After Delivery"
+
+User Prompt:
+"Yes, this is the right subset. Stick with these 10 only."
+
+===========================================
+Session 5 – Expanding to Full Structure
+===========================================
+
+User Prompt:
+"Expand the 10 selected MVP use cases into full detail. Number the steps in Main Flow, use letters for Subflows and Alternatives. Keep language short and precise. Don’t explain outside the structure."
+
+ChatGPT Response:
+(Example output)
+
+Use Case 1: Web Order of Prepared Meal with Card  
+Preconditions: Customer logged in; menu items in stock.  
+Main Flow:  
+1. Customer adds items to cart.  
+2. System shows item prices and taxes.  
+3. Customer selects delivery location and time.  
+4. Customer enters card details.  
+5. System authorizes payment.  
+6. Confirmation sent.  
+Subflows:  
+a. Address validation.  
+Alternative Flows:  
+a. Card declined.  
+b. Location not serviceable.  
+
+---
+
+Use Case 5: Modify or Cancel Order Before Preparation  
+Preconditions: Order is “Accepted,” not yet “In Prep.”  
+Main Flow:  
+1. Customer opens order.  
+2. Customer chooses Modify or Cancel.  
+3. If Modify: system recalculates totals and requires reauthorization if needed.  
+4. If Cancel: system shows refund summary.  
+5. Customer confirms action.  
+6. System updates order status.  
+Subflows:  
+a. Reauthorization if total increases.  
+b. Refund processing depending on settlement timing.  
+Alternative Flows:  
+a. Order already in prep → change/cancel blocked.  
+b. Past cancellation window → request denied.  
+
+… (continued for all 10 use cases)
+
+User Prompt:
+"Some of these are still a little wordy. Simplify sentences. One action per line."
+
+ChatGPT Response:
+"Revised text for all 10 use cases. Each step reduced to a single short action. Document length ~5 pages."
+
+===========================================
+Session 6 – Formatting for LaTeX
+===========================================
+
+User Prompt:
+"Reformat the 10 use cases in LaTeX. Use \subsection for each case. Main Flow numbered, Subflows lettered, Alternatives lettered. No extra commentary."
+
+ChatGPT Response:
+"Delivered LaTeX with all 10 MVP use cases in consistent style. Ready to compile into PDF."

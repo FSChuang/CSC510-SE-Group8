@@ -3,6 +3,8 @@
 ## Deciding What Not To Do
 In Project 1b1, we designed 30 use cases covering a wide range of WolfCafe workflows, including advanced payment types, tax/regulation handling, administrative tasks, and edge cases. For the MVP, our guiding principle was to keep only the workflows essential to learning whether customers will actually use WolfCafe for core ordering and fulfillment.
 
+As part of the selection process, we asked two different commercial LLMs (ChatGPT and Claude) to each generate 15–20 “best” candidates drawn from the 1b1 file. By comparing the two lists, we identified overlapping cases that both models considered central. These overlaps strongly informed the MVP scope, since they reflect agreement across systems on what constitutes the most representative workflows.
+
 We excluded:
 - **Complex payments** such as SNAP/EBT, split payments, and multi-currency support.  
 - **Regulatory and taxation scenarios** like jurisdiction-specific rules or holiday surcharges.  
