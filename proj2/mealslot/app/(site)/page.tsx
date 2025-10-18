@@ -1,10 +1,14 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { SlotMachine } from "@/components/SlotMachine";
 import { PowerUps } from "@/components/PowerUps";
 import { Dish, PowerUpsInput, RecipeJSON } from "@/lib/schemas";
 import { cn } from "@/components/ui/cn";
+import Modal from "@/components/ui/Modal";
+import RecipePanel from "@/components/RecipePanel";
+import MapStub from "@/components/MapStub";
 
 type Venue = {
   id: string;
@@ -17,7 +21,7 @@ type Venue = {
   distance_km: number;
 };
 
-export default function Page() {
+function HomePage() {
   const [categories, setCategories] = useState<string[]>(["main", "veggie", "soup"]);
   const [powerups, setPowerups] = useState<PowerUpsInput>({});
   const [selection, setSelection] = useState<Dish[]>([]);
@@ -26,8 +30,9 @@ export default function Page() {
 
   const [recipes, setRecipes] = useState<RecipeJSON[] | null>(null);
   const [venues, setVenues] = useState<Venue[] | null>(null);
+  const [openRecipeModal, setOpenRecipeModal] = useState(false);
+
   const cuisines = useMemo(() => {
-    // naive cuisine hint from dish tags/category
     const tagish = new Set<string>();
     selection.forEach((d) => {
       d.tags.forEach((t) => tagish.add(t));
@@ -64,6 +69,7 @@ export default function Page() {
     setSelection(data.selection);
     setRecipes(null);
     setVenues(null);
+    setOpenRecipeModal(false);
     setCooldownMs(3000);
   };
 
@@ -77,6 +83,7 @@ export default function Page() {
     });
     const j = await r.json();
     setRecipes(j.recipes);
+    setOpenRecipeModal(true);
   };
 
   const fetchVenues = async () => {
@@ -143,83 +150,48 @@ export default function Page() {
         </section>
       )}
 
-      <section id="cook" className="rounded-2xl border bg-white p-4 shadow-sm">
-        <h2 className="mb-2 text-lg font-semibold">Cook at Home</h2>
-        <p className="text-sm text-neutral-600">
-          Requests stubbed recipes conforming to a strict schema.
-        </p>
-        {recipes && (
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            {recipes.map((r) => (
-              <div key={r.id} className="rounded-xl border p-3">
-                <div className="mb-1 text-base font-semibold">{r.name}</div>
-                <div className="mb-2 text-xs text-neutral-600">
-                  Servings: {r.servings} • Total: {r.total_minutes}m
-                </div>
-                <div className="mb-1 text-sm font-medium">Ingredients</div>
-                <ul className="mb-2 list-disc pl-6 text-sm">
-                  {r.ingredients.map((ing, i) => (
-                    <li key={i}>
-                      {ing.item} — {ing.qty} {ing.unit}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mb-1 text-sm font-medium">Steps</div>
-                <ol className="list-decimal pl-6 text-sm">
-                  {r.steps.map((s) => (
-                    <li key={s.order}>
-                      {s.text} {s.timer_minutes ? `(${s.timer_minutes}m)` : ""}
-                    </li>
-                  ))}
-                </ol>
-                <div className="mt-2 text-xs text-neutral-600">
-                  Nutrition: {r.nutrition.kcal} kcal • P {r.nutrition.protein_g}g • C{" "}
-                  {r.nutrition.carbs_g}g • F {r.nutrition.fat_g}g
-                </div>
-                {r.videos?.length ? (
-                  <div className="mt-2">
-                    <div className="text-sm font-medium">Videos</div>
-                    <div className="mt-1 grid grid-cols-2 gap-2">
-                      {r.videos.slice(0, 4).map((v) => (
-                        <a
-                          key={v.id}
-                          className="rounded border p-2 text-xs underline"
-                          href={v.url}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {v.title}
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      {/* Cook at Home modal */}
+      <Modal
+        open={openRecipeModal && !!recipes}
+        title="Cook at Home — Recipes"
+        onClose={() => setOpenRecipeModal(false)}
+      >
+        {recipes ? <RecipePanel recipes={recipes} /> : <div className="text-sm">Loading…</div>}
+      </Modal>
 
       <section id="outside" className="rounded-2xl border bg-white p-4 shadow-sm">
         <h2 className="mb-2 text-lg font-semibold">Eat Outside</h2>
         <p className="text-sm text-neutral-600">Shows stubbed venues; “Using city-level location.”</p>
         {venues && (
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            {venues.map((v) => (
-              <div key={v.id} className="rounded-xl border p-3">
-                <div className="mb-1 text-base font-semibold">{v.name}</div>
-                <div className="text-xs text-neutral-600">
-                  {v.cuisine} • {v.price} • {v.rating.toFixed(1)}★ • {v.distance_km} km
+          <>
+            <div className="mt-3 grid gap-3 md:grid-cols-2" aria-label="Venue list">
+              {venues.map((v) => (
+                <div key={v.id} className="rounded-xl border p-3">
+                  <div className="mb-1 text-base font-semibold">{v.name}</div>
+                  <div className="text-xs text-neutral-600">
+                    {v.cuisine} • {v.price} • {v.rating.toFixed(1)}★ • {v.distance_km} km
+                  </div>
+                  <div className="text-xs">{v.addr}</div>
+                  <a
+                    className="mt-2 inline-block text-xs underline"
+                    href={v.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Visit website
+                  </a>
                 </div>
-                <div className="text-xs">{v.addr}</div>
-                <a className="mt-2 inline-block text-xs underline" href={v.url} target="_blank" rel="noreferrer">
-                  Visit website
-                </a>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            <div className="mt-3">
+              <MapStub venues={venues} />
+            </div>
+          </>
         )}
       </section>
     </div>
   );
 }
+
+// Client-only page to avoid hydration noise from extensions/timers.
+export default dynamic(() => Promise.resolve(HomePage), { ssr: false });
