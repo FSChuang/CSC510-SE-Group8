@@ -5,6 +5,7 @@ import { dishesByCategory } from "@/lib/dishes";
 import { Dish, PowerUpsInput } from "@/lib/schemas";
 import { weightedSpin } from "@/lib/scoring";
 import { withRateLimit } from "@/lib/rateLimit";
+import { prisma } from "@/lib/db";
 
 const Body = z.object({
   categories: z.array(z.string().min(1)).min(1).max(6),
@@ -26,6 +27,20 @@ export async function POST(req: NextRequest) {
 
   const reels: Dish[][] = categories.map((c) => dishesByCategory(c));
   const selection = weightedSpin(reels, locked, powerups);
+
+  // Persist spin minimally (for audit/debug); SQLite by default
+  try {
+    await prisma.spin.create({
+      data: {
+        reelsJson: JSON.stringify(reels.map(r => r.map(d => d.id))),
+        lockedJson: JSON.stringify(locked),
+        resultDishIds: JSON.stringify(selection.map((d) => d.id)),
+        powerupsJson: JSON.stringify(powerups)
+      }
+    });
+  } catch {
+    // swallow DB errors to avoid breaking UX in stub mode
+  }
 
   return Response.json({
     spinId: `spin_${Date.now()}`,
