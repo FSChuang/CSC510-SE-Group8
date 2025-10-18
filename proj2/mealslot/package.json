@@ -16,8 +16,11 @@
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
     "prisma:push": "prisma db push",
-    "prisma:seed": "ts-node --compiler-options '{\"module\":\"commonjs\"}' prisma/seed.ts",
+    "prisma:seed": "node prisma/seed.mjs",
     "postinstall": "prisma generate"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.mjs"
   },
   "engines": {
     "node": ">=18.18.0"

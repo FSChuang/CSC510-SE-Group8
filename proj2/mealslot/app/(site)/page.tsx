@@ -126,7 +126,14 @@ function HomePage() {
 
       <PowerUps value={powerups} onChange={setPowerups} />
 
-      <SlotMachine categories={categories} onSpin={onSpin} cooldownMs={cooldownMs} busy={busy} />
+      {/* NEW: pass selection down so reels always match server result */}
+      <SlotMachine
+        categories={categories}
+        onSpin={onSpin}
+        cooldownMs={cooldownMs}
+        busy={busy}
+        selection={selection}
+      />
 
       {selection.length > 0 && (
         <section className="rounded-2xl border bg-white p-4 shadow-sm">
@@ -150,7 +157,6 @@ function HomePage() {
         </section>
       )}
 
-      {/* Cook at Home modal */}
       <Modal
         open={openRecipeModal && !!recipes}
         title="Cook at Home — Recipes"

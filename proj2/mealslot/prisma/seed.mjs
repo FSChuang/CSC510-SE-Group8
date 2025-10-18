@@ -1,11 +1,17 @@
-// server-only source of truth for the dish catalog used by /api/spin.
-// Deterministic, secret-free. Per-category caps ensure every reel has options.
+/* eslint-disable no-console */
+import { PrismaClient } from "@prisma/client";
 
-import { Dish } from "./schemas";
+const prisma = new PrismaClient();
 
-type Raw = [name: string, costBand: number, timeBand: number, isHealthy: boolean, allergens: string[], ytQuery: string];
+const categories = [
+  { id: "main", name: "Main", tags: "hearty,protein" },
+  { id: "veggie", name: "Veggie", tags: "vegetarian,greens" },
+  { id: "soup", name: "Soup", tags: "warm,comfort" },
+  { id: "meat", name: "Meat", tags: "protein" },
+  { id: "dessert", name: "Dessert", tags: "sweet" }
+];
 
-const MAIN: Raw[] = [
+const MAIN = [
   ["Margherita Pizza", 2, 2, false, ["gluten", "dairy"], "margherita pizza"],
   ["Grilled Chicken Bowl", 2, 2, true, [], "grilled chicken bowl"],
   ["Tofu Stir Fry", 1, 1, true, ["soy"], "tofu stir fry"],
@@ -22,7 +28,7 @@ const MAIN: Raw[] = [
   ["Steak & Potatoes", 3, 2, false, [], "steak potatoes"]
 ];
 
-const VEGGIE: Raw[] = [
+const VEGGIE = [
   ["Caesar Salad", 1, 1, true, ["dairy"], "caesar salad"],
   ["Greek Salad", 1, 1, true, ["dairy"], "greek salad"],
   ["Quinoa Bowl", 1, 1, true, [], "quinoa bowl"],
@@ -35,20 +41,20 @@ const VEGGIE: Raw[] = [
   ["Hummus Plate", 1, 1, true, ["sesame"], "hummus plate"]
 ];
 
-const SOUP: Raw[] = [
+const SOUP = [
   ["Tomato Soup", 1, 1, true, [], "tomato soup"],
   ["Chicken Noodle Soup", 1, 2, true, ["gluten"], "chicken noodle soup"],
   ["Miso Soup", 1, 1, true, ["soy"], "miso soup"],
   ["Lentil Soup", 1, 2, true, [], "lentil soup"],
   ["Minestrone", 1, 2, true, ["gluten"], "minestrone"],
-  ["Butternut Squash Soup", 1, 2, true, [], "butternut squash soup"],
+  ["Butternut Squash", 1, 2, true, [], "butternut squash soup"],
   ["Beef Broth", 1, 2, false, [], "beef broth soup"],
   ["Clam Chowder", 2, 2, false, ["shellfish", "dairy"], "clam chowder"],
-  ["Hot & Sour Soup", 1, 1, true, ["soy"], "hot sour soup"],
+  ["Hot & Sour", 1, 1, true, ["soy"], "hot sour soup"],
   ["Corn Chowder", 1, 2, false, ["dairy"], "corn chowder"]
 ];
 
-const MEAT: Raw[] = [
+const MEAT = [
   ["Beef Bulgogi", 2, 2, false, ["soy"], "beef bulgogi"],
   ["BBQ Ribs", 3, 3, false, [], "bbq ribs"],
   ["Chicken Satay", 2, 2, true, ["peanut"], "chicken satay"],
@@ -61,7 +67,7 @@ const MEAT: Raw[] = [
   ["Fish & Chips", 2, 2, false, ["gluten", "fish"], "fish and chips"]
 ];
 
-const DESSERT: Raw[] = [
+const DESSERT = [
   ["Chia Pudding", 1, 1, true, [], "chia pudding"],
   ["Chocolate Brownie", 1, 1, false, ["gluten"], "chocolate brownie"],
   ["Fruit Salad", 1, 1, true, [], "fruit salad"],
@@ -74,82 +80,85 @@ const DESSERT: Raw[] = [
   ["Banana Bread", 1, 2, false, ["gluten"], "banana bread"]
 ];
 
-function slugify(s: string) {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+function asDishes(catId, arr) {
+  return arr.map((a) => ({
+    id: `${catId}_${a[0].toLowerCase().replace(/[^a-z0-9]+/g, "_")}`.slice(0, 50),
+    name: a[0],
+    categoryId: catId,
+    tags: [],
+    costBand: a[1],
+    timeBand: a[2],
+    isHealthy: a[3],
+    allergens: a[4],
+    ytQuery: a[5]
+  }));
 }
 
-function expand(cat: string, raws: Raw[], cap: number): Dish[] {
-  // Base dishes
-  const base = raws.map<Dish>((r) => ({
-    id: `${cat}_${slugify(r[0])}`.slice(0, 50),
-    name: r[0],
-    category: cat,
-    tags: [],
-    costBand: r[1],
-    timeBand: r[2],
-    isHealthy: r[3],
-    allergens: r[4],
-    ytQuery: r[5]
-  }));
-
-  // Deterministic variants to add variety
-  const variants = ["(Spicy)", "(Low-carb)", "(Gluten-free)"];
-  const extra: Dish[] = [];
-  for (const b of base) {
-    for (const v of variants) {
-      if (base.length + extra.length >= cap) break; // stop at per-category cap
-      const isGF = v.includes("Gluten-free");
-      extra.push({
-        ...b,
-        id: `${b.id}_${slugify(v)}`.slice(0, 50),
-        name: `${b.name} ${v}`,
-        tags: [...b.tags, v.replace(/[()]/g, "").toLowerCase()],
-        isHealthy: b.isHealthy || v.includes("Low-carb") || isGF,
-        allergens: isGF ? b.allergens.filter((a) => a !== "gluten") : b.allergens
-      });
-    }
-    if (base.length + extra.length >= cap) break;
+async function main() {
+  console.log("Seeding…");
+  for (const c of categories) {
+    await prisma.category.upsert({
+      where: { id: c.id },
+      update: {},
+      create: c
+    });
   }
 
-  // Ensure we never exceed cap and never return empty
-  const out = [...base, ...extra].slice(0, Math.max(cap, 1));
-  return out.length ? out : base.slice(0, 1);
+  const all = [
+    ...asDishes("main", MAIN),
+    ...asDishes("veggie", VEGGIE),
+    ...asDishes("soup", SOUP),
+    ...asDishes("meat", MEAT),
+    ...asDishes("dessert", DESSERT)
+  ];
+
+  // Expand to ~85 dishes with variants
+  const extras = [];
+  const variants = ["(Spicy)", "(Low-carb)", "(Gluten-free)"];
+  for (const base of all) {
+    for (const v of variants) {
+      if (extras.length + all.length >= 85) break;
+      const isGF = v.includes("Gluten-free");
+      extras.push({
+        ...base,
+        id: `${base.id}_${v.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`.slice(0, 50),
+        name: `${base.name} ${v}`,
+        tags: [...base.tags, v.replace(/[()]/g, "").toLowerCase()],
+        isHealthy: base.isHealthy || v.includes("Low-carb") || isGF,
+        allergens: isGF ? base.allergens.filter((x) => x !== "gluten") : base.allergens
+      });
+    }
+    if (extras.length + all.length >= 85) break;
+  }
+
+  const final = [...all, ...extras].slice(0, 85);
+
+  for (const d of final) {
+    await prisma.dish.upsert({
+      where: { id: d.id },
+      update: {},
+      create: {
+        id: d.id,
+        name: d.name,
+        categoryId: d.categoryId,
+        tags: d.tags.join(","),
+        costBand: d.costBand,
+        timeBand: d.timeBand,
+        isHealthy: d.isHealthy,
+        allergens: d.allergens.join(","),
+        ytQuery: d.ytQuery
+      }
+    });
+  }
+
+  console.log(`Seeded categories=${categories.length}, dishes=${final.length}`);
 }
 
-// Per-category caps to ~85 total and guarantee coverage
-const PER_CAT_CAP = {
-  main: 22,
-  veggie: 16,
-  soup: 16,
-  meat: 16,
-  dessert: 16
-} as const;
-
-const MAIN_EXP = expand("main", MAIN, PER_CAT_CAP.main);
-const VEGGIE_EXP = expand("veggie", VEGGIE, PER_CAT_CAP.veggie);
-const SOUP_EXP = expand("soup", SOUP, PER_CAT_CAP.soup);
-const MEAT_EXP = expand("meat", MEAT, PER_CAT_CAP.meat);
-const DESSERT_EXP = expand("dessert", DESSERT, PER_CAT_CAP.dessert);
-
-const CATALOG: Dish[] = [
-  ...MAIN_EXP,
-  ...VEGGIE_EXP,
-  ...SOUP_EXP,
-  ...MEAT_EXP,
-  ...DESSERT_EXP
-];
-
-// Group by category once
-const BY_CAT: Record<string, Dish[]> = CATALOG.reduce((acc, d) => {
-  (acc[d.category] ||= []).push(d);
-  return acc;
-}, {} as Record<string, Dish[]>);
-
-// Public API used by /api/spin
-export function dishesByCategory(category: string): Dish[] {
-  return (BY_CAT[category] ?? []).slice(); // copy to avoid mutation
-}
-
-export function allDishes(): Dish[] {
-  return CATALOG.slice();
+try {
+  await main();
+} catch (e) {
+  console.error(e);
+  process.exit(1);
+} finally {
+  await prisma.$disconnect();
 }
