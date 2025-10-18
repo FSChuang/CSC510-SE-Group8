@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RecipeJSON",
+  "type": "object",
+  "required": ["id", "name", "servings", "total_minutes", "equipment", "ingredients", "steps", "nutrition", "warnings", "videos"],
+  "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "servings": { "type": "integer", "minimum": 1 },
+    "total_minutes": { "type": "integer", "minimum": 1 },
+    "equipment": { "type": "array", "items": { "type": "string" } },
+    "ingredients": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["item", "qty", "unit"],
+        "properties": {
+          "item": { "type": "string" },
+          "qty": { "type": "number", "exclusiveMinimum": 0 },
+          "unit": { "type": "string" }
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["order", "text", "timer_minutes"],
+        "properties": {
+          "order": { "type": "integer", "minimum": 1 },
+          "text": { "type": "string" },
+          "timer_minutes": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "nutrition": {
+      "type": "object",
+      "required": ["kcal", "protein_g", "carbs_g", "fat_g"],
+      "properties": {
+        "kcal": { "type": "number", "minimum": 0 },
+        "protein_g": { "type": "number", "minimum": 0 },
+        "carbs_g": { "type": "number", "minimum": 0 },
+        "fat_g": { "type": "number", "minimum": 0 }
+      }
+    },
+    "warnings": { "type": "array", "items": { "type": "string" } },
+    "videos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "url", "thumbnail"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "url": { "type": "string", "format": "uri" },
+          "thumbnail": { "type": "string", "format": "uri" }
+        }
+      }
+    }
+  }
+}
