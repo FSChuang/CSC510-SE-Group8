@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = env("DATABASE_PROVIDER") // optional; default resolves from url
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  provider  String   @default("mock")
+  createdAt DateTime @default(now())
+  favorites Favorite[]
+  spins     Spin[]
+  PartyMember PartyMember[]
+}
+
+model Category {
+  id    String @id
+  name  String @unique
+  tags  String
+  dishes Dish[]
+}
+
+model Dish {
+  id         String   @id
+  name       String
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  tags       String
+  costBand   Int
+  timeBand   Int
+  isHealthy  Boolean
+  allergens  String
+  ytQuery    String
+  favorites  Favorite[]
+}
+
+model Spin {
+  id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id])
+  reelsJson     String
+  lockedJson    String
+  resultDishIds String
+  powerupsJson  String
+  createdAt     DateTime @default(now())
+}
+
+model Party {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  hostId       String?
+  isActive     Boolean  @default(true)
+  constraintsJson String
+  createdAt    DateTime @default(now())
+  members      PartyMember[]
+}
+
+model PartyMember {
+  id        String   @id @default(cuid())
+  partyId   String
+  party     Party    @relation(fields: [partyId], references: [id])
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  prefsJson String
+  joinedAt  DateTime @default(now())
+}
+
+model Favorite {
+  id      String @id @default(cuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  dishId  String
+  dish    Dish   @relation(fields: [dishId], references: [id])
+}

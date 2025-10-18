@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+dist
+coverage
+*.log
+.env*
+!/.*.example
+playwright-report
+test-results
