@@ -1,9 +1,10 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { PartyClient } from "@/components/PartyClient";
 
-export default function PartyPage() {
+function PartyPageInner() {
   const [code, setCode] = useState<string>("");
   return (
     <div className="space-y-4">
@@ -21,3 +22,5 @@ export default function PartyPage() {
     </div>
   );
 }
+
+export default dynamic(() => Promise.resolve(PartyPageInner), { ssr: false });

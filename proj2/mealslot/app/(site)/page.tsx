@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { SlotMachine } from "@/components/SlotMachine";
 import { PowerUps } from "@/components/PowerUps";
@@ -17,7 +18,7 @@ type Venue = {
   distance_km: number;
 };
 
-export default function Page() {
+function HomePage() {
   const [categories, setCategories] = useState<string[]>(["main", "veggie", "soup"]);
   const [powerups, setPowerups] = useState<PowerUpsInput>({});
   const [selection, setSelection] = useState<Dish[]>([]);
@@ -27,7 +28,6 @@ export default function Page() {
   const [recipes, setRecipes] = useState<RecipeJSON[] | null>(null);
   const [venues, setVenues] = useState<Venue[] | null>(null);
   const cuisines = useMemo(() => {
-    // naive cuisine hint from dish tags/category
     const tagish = new Set<string>();
     selection.forEach((d) => {
       d.tags.forEach((t) => tagish.add(t));
@@ -223,3 +223,6 @@ export default function Page() {
     </div>
   );
 }
+
+// Disable SSR for this page to avoid hydration issues from extensions/timers.
+export default dynamic(() => Promise.resolve(HomePage), { ssr: false });
