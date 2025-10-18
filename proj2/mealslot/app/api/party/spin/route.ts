@@ -1,4 +1,6 @@
 import "server-only";
+export const runtime = "nodejs"; // Prisma + ws client => Node runtime
+
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { dishesByCategory } from "@/lib/dishes";
@@ -20,8 +22,8 @@ async function emitWs(code: string, payload: any) {
     });
     sock.emit("spin", { code, selection: payload });
     setTimeout(() => sock.close(), 100);
-  } catch {
-    // no-op in stub/offline mode
+  } catch (e) {
+    console.warn("ws emit failed (non-fatal):", (e as Error).message);
   }
 }
 
@@ -33,30 +35,36 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const json = await req.json().catch(() => ({}));
-  const parsed = Body.safeParse(json);
-  if (!parsed.success) return Response.json({ issues: parsed.error.issues }, { status: 400 });
-
-  const { code, categories, locked = [], powerups = {} as PowerUpsInput } = parsed.data;
-  const reels: Dish[][] = categories.map((c) => dishesByCategory(c));
-  const selection = weightedSpin(reels, locked, powerups);
-
-  // Persist spin
   try {
-    await prisma.spin.create({
-      data: {
-        reelsJson: JSON.stringify(reels.map(r => r.map(d => d.id))),
-        lockedJson: JSON.stringify(locked),
-        resultDishIds: JSON.stringify(selection.map((d) => d.id)),
-        powerupsJson: JSON.stringify(powerups)
-      }
-    });
-  } catch {
-    // ignore DB errors in stub mode
+    const json = await req.json().catch(() => ({}));
+    const parsed = Body.safeParse(json);
+    if (!parsed.success) return Response.json({ issues: parsed.error.issues }, { status: 400 });
+
+    const { code, categories, locked = [], powerups = {} as PowerUpsInput } = parsed.data;
+    const reels: Dish[][] = categories.map((c) => dishesByCategory(c));
+    const selection = weightedSpin(reels, locked, powerups);
+
+    try {
+      await prisma.spin.create({
+        data: {
+          reelsJson: JSON.stringify(reels.map((r) => r.map((d) => d.id))),
+          lockedJson: JSON.stringify(locked),
+          resultDishIds: JSON.stringify(selection.map((d) => d.id)),
+          powerupsJson: JSON.stringify(powerups)
+        }
+      });
+    } catch (e) {
+      console.warn("party spin persist failed (non-fatal):", (e as Error).message);
+    }
+
+    emitWs(code, selection).catch(() => {});
+
+    return Response.json({ spinId: `pty_spin_${Date.now()}`, reels, selection });
+  } catch (err) {
+    console.error("party spin route error:", err);
+    return Response.json(
+      { code: "INTERNAL_ERROR", message: (err as Error).message ?? "unknown" },
+      { status: 500 }
+    );
   }
-
-  // Fire-and-forget WS broadcast (ok if WS server isn’t running)
-  emitWs(code, selection).catch(() => {});
-
-  return Response.json({ spinId: `pty_spin_${Date.now()}`, reels, selection });
 }
