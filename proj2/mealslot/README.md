@@ -54,6 +54,7 @@ Create a Codespace: GitHub → Code → Codespaces → Create on `main`
 
 Then run:
 ```
+cd proj2/mealslot
 corepack enable
 corepack prepare pnpm@latest --activate
 pnpm install
