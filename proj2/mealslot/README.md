@@ -1,4 +1,4 @@
-# MealSlot — MVP Scaffolding
+# MealSlot — MVP Scaffolding (Phase 1)
 
 Production-ready scaffolding with strict TypeScript, Next.js 15 App Router, Tailwind CSS, Prisma (SQLite by default), deterministic stubs (LLM + YouTube + Places), Socket.IO websockets, Zod validation, rate limiting, and tests.
 
@@ -46,13 +46,14 @@ mealslot/
 ├─ playwright.config.ts  vitest.config.ts
 ├─ .eslintrc.cjs  .prettierrc  .gitignore
 └─ README.md
+```
+
 Quick Start (GitHub Codespaces)
+
 Create a Codespace: GitHub → Code → Codespaces → Create on main
 
 Then run:
-
-bash
-Copy code
+```
 corepack enable
 corepack prepare pnpm@latest --activate
 pnpm install
@@ -60,42 +61,45 @@ pnpm prisma db push
 pnpm prisma db seed
 cp -n .env.example .env.local   # stubs work without keys
 pnpm dev                        # Next.js on port 3000 (auto-forwarded)
+```
 Optional: WebSocket dev server
-
-bash
-Copy code
+```
 cd ws-server
 pnpm install
 pnpm dev                        # typically port 4001 (auto-forwarded)
+```
 Scripts
-bash
-Copy code
+```
 pnpm lint
 pnpm typecheck
 pnpm test
 pnpm test:e2e    # requires Playwright
+```
 Environment
+
 Basic flows work with no secrets (deterministic stubs auto-activate).
 
 Copy .env.example to .env.local. Populate keys as needed later.
 
 Database
+
 Default: SQLite (zero-config)
 
 Postgres (optional): via docker-compose.yml
-
-bash
-Copy code
+```
 docker compose up -d
 # update Prisma datasource in prisma/schema.prisma if switching to Postgres
 pnpm prisma db push
 pnpm prisma db seed
+```
 Validation & Rate Limiting
+
 All API input/output is Zod-validated (lib/schemas.ts).
 
 Basic rate limiting in lib/rateLimit.ts.
 
 Deterministic Stubs
+
 When env keys are missing, endpoints return deterministic data for repeatable tests and demos:
 
 LLM recipe: app/api/recipe/route.ts uses lib/schemas.ts + public/recipe.schema.json.
@@ -105,6 +109,7 @@ YouTube lookup: deterministic helper in lib/youtube.ts.
 Places: deterministic venue list in app/api/places/route.ts.
 
 Party Mode (Phase 1)
+
 Websocket server scaffold: ws-server/src/index.ts (Socket.IO).
 
 API routes under app/api/party/*:
@@ -114,6 +119,7 @@ create, join, spin, state, leave
 Phase 2 will wire spin broadcasts + constraint merge with tests.
 
 Tests
+
 Unit: tests/unit/* (Vitest)
 
 mergeConstraints.test.ts
@@ -125,12 +131,12 @@ recipeSchema.test.ts
 E2E: tests/e2e/smoke.spec.ts (Playwright)
 
 Run:
-
-bash
-Copy code
+```
 pnpm test
 pnpm test:e2e
+```
 Notes
+
 Next.js App Router with strict TypeScript.
 
 Tailwind configured in tailwind.config.ts.
