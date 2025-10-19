@@ -98,7 +98,7 @@ All API input/output is Zod-validated (`lib/schemas.ts`).
 
 Basic rate limiting in `lib/rateLimit.ts`.
 
-Deterministic Stubs
+## Deterministic Stubs
 
 When env keys are missing, endpoints return deterministic data for repeatable tests and demos:
 
@@ -118,7 +118,7 @@ API routes under `app/api/party/*`:
 
 Phase 2 will wire spin broadcasts + constraint merge with tests.
 
-Tests
+## Tests
 
 Unit: `tests/unit/*` (Vitest)
 
@@ -135,7 +135,7 @@ Run:
 pnpm test
 pnpm test:e2e
 ```
-Notes
+## Notes
 
 Next.js App Router with strict TypeScript.
 
