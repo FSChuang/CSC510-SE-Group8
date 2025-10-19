@@ -48,7 +48,7 @@ mealslot/
 └─ README.md
 ```
 
-Quick Start (GitHub Codespaces)
+## Quick Start (GitHub Codespaces)
 
 Create a Codespace: GitHub → Code → Codespaces → Create on `main`
 
@@ -75,13 +75,13 @@ pnpm typecheck
 pnpm test
 pnpm test:e2e    # requires Playwright
 ```
-Environment
+## Environment
 
 Basic flows work with no secrets (deterministic stubs auto-activate).
 
 Copy `.env.example` to `.env.local`. Populate keys as needed later.
 
-Database
+## Database
 
 Default: SQLite (zero-config)
 
@@ -92,7 +92,7 @@ docker compose up -d
 pnpm prisma db push
 pnpm prisma db seed
 ```
-Validation & Rate Limiting
+## Validation & Rate Limiting
 
 All API input/output is Zod-validated (`lib/schemas.ts`).
 
@@ -108,7 +108,7 @@ YouTube lookup: deterministic helper in `lib/youtube.ts`.
 
 Places: deterministic venue list in `app/api/places/route.ts`.
 
-Party Mode (Phase 1)
+## Party Mode
 
 Websocket server scaffold: `ws-server/src/index.ts` (Socket.IO).
 
