@@ -1,23 +1,45 @@
 import "server-only";
+export const runtime = "nodejs";
+
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { newPartyCode } from "@/lib/party";
+import { partyCodeFromSeed, PrefsSchema } from "@/lib/party";
+import { prisma } from "@/lib/db";
+
+const Body = z.object({
+  nickname: z.string().min(1).max(24).optional()
+});
 
 export async function POST(req: NextRequest) {
-  const Body = z.object({
-    hostName: z.string().min(1).max(40).optional()
-  });
-  const json = await req.json().catch(() => ({}));
-  const parsed = Body.safeParse(json);
-  if (!parsed.success) return Response.json({ issues: parsed.error.issues }, { status: 400 });
+  try {
+    const json = (await req.json().catch(() => ({}))) as unknown;
+    const parsed = Body.safeParse(json);
+    if (!parsed.success) return Response.json({ issues: parsed.error.issues }, { status: 400 });
 
-  const code = newPartyCode();
-  return Response.json({
-    party: {
-      id: `pty_${Date.now()}`,
+    const code = partyCodeFromSeed(`${Date.now()}|${Math.random()}`);
+    const party = await prisma.party.create({
+      data: {
+        code,
+        isActive: true,
+        constraintsJson: JSON.stringify({})
+      }
+    });
+
+    const member = await prisma.partyMember.create({
+      data: {
+        partyId: party.id,
+        prefsJson: JSON.stringify({ nickname: parsed.data.nickname ?? "Host" })
+      }
+    });
+
+    return Response.json({
       code,
-      isActive: true,
-      constraints: { diet: [], allergens: [], maxBudget: null as number | null, maxTime: null as number | null }
-    }
-  });
+      partyId: party.id,
+      memberId: member.id,
+      host: true
+    });
+  } catch (e) {
+    console.error("/api/party/create", e);
+    return Response.json({ code: "INTERNAL" }, { status: 500 });
+  }
 }
