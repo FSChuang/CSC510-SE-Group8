@@ -1,4 +1,4 @@
-# MealSlot — MVP Scaffolding (Phase 1)
+# MealSlot — MVP Scaffolding
 
 Production-ready scaffolding with strict TypeScript, Next.js 15 App Router, Tailwind CSS, Prisma (SQLite by default), deterministic stubs (LLM + YouTube + Places), Socket.IO websockets, Zod validation, rate limiting, and tests.
 
