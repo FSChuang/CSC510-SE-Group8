@@ -127,12 +127,22 @@ export function PartyClient({ code: initialCode = "" }: { code?: string }) {
 
   const onHostSpin = async () => {
     if (!state) return;
+
+    // use whatever categories you want to include in a party spin
     const categories = ["main", "veggie", "soup", "meat", "dessert"];
+
+    // send the MERGED constraints currently displayed in the UI
     const r = await fetch("/api/party/spin", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ code: state.party.code, categories })
+      body: JSON.stringify({
+        code: state.party.code,
+        categories,
+        // 👇 this is the key addition
+        prefs: state.party.constraints,
+      }),
     });
+
     const j = await r.json();
     if (r.ok) {
       setLastSpin(j.selection);
