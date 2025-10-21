@@ -23,7 +23,7 @@ type Venue = {
 };
 
 function HomePage() {
-  const [categories, setCategories] = useState<string[]>(["main", "veggie", "soup"]);
+  const [category, setCategory] = useState<string>("Breakfast");
   const [dishCount, setDishCount] = useState(0);
   const [powerups, setPowerups] = useState<PowerUpsInput>({});
   const [selection, setSelection] = useState<Dish[]>([]);
@@ -56,10 +56,11 @@ function HomePage() {
 
   const onSpin = async (locked: { index: number; dishId: string }[]) => {
     setBusy(true);
+    // send categories as an array for backwards compatibility, containing the single selection
     const res = await fetch("/api/spin", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ categories, locked, powerups })
+      body: JSON.stringify({ categories: category ? [category] : [], locked, powerups })
     });
     setBusy(false);
     if (!res.ok) {
@@ -101,10 +102,10 @@ function HomePage() {
   return (
     <div className="space-y-4">
       <section className="rounded-2xl border bg-white p-4 shadow-sm">
-        <h2 className="mb-2 text-lg font-semibold">Choose Categories</h2>
+        <h2 className="mb-2 text-lg font-semibold">Choose Category</h2>
         <div className="flex flex-wrap gap-2">
-          {["main", "veggie", "soup", "meat", "dessert"].map((c) => {
-            const active = categories.includes(c);
+          {["Breakfast", "Lunch", "Dinner", "Dessert"].map((c) => {
+            const active = category === c;
             return (
               <button
                 key={c}
@@ -112,11 +113,8 @@ function HomePage() {
                   "rounded-full border px-3 py-1 text-sm",
                   active ? "bg-neutral-900 text-white" : "bg-white"
                 )}
-                onClick={() =>
-                  setCategories((prev) =>
-                    prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]
-                  )
-                }
+                // clicking a different option selects it; clicking the active option will deselect (set to "")
+                onClick={() => setCategory((prev) => (prev === c ? "" : c))}
                 aria-pressed={active}
               >
                 {c}
