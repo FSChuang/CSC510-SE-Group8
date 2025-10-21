@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { SlotMachine } from "@/components/SlotMachine";
 import { PowerUps } from "@/components/PowerUps";
+import DishCountInput from "@/components/DishCountInput";
 import { Dish, PowerUpsInput, RecipeJSON } from "@/lib/schemas";
 import { cn } from "@/components/ui/cn";
 import Modal from "@/components/ui/Modal";
@@ -23,6 +24,7 @@ type Venue = {
 
 function HomePage() {
   const [categories, setCategories] = useState<string[]>(["main", "veggie", "soup"]);
+  const [dishCount, setDishCount] = useState(0);
   const [powerups, setPowerups] = useState<PowerUpsInput>({});
   const [selection, setSelection] = useState<Dish[]>([]);
   const [busy, setBusy] = useState(false);
@@ -126,9 +128,11 @@ function HomePage() {
 
       <PowerUps value={powerups} onChange={setPowerups} />
 
+      <DishCountInput value={dishCount} onChange={setDishCount} />
+
       {/* NEW: pass selection down so reels always match server result */}
       <SlotMachine
-        categories={categories}
+        reelCount={dishCount}
         onSpin={onSpin}
         cooldownMs={cooldownMs}
         busy={busy}
