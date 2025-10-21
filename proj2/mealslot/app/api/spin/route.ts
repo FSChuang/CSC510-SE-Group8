@@ -1,60 +1,101 @@
 import "server-only";
-export const runtime = "nodejs"; // ensure Prisma runs in Node runtime
+export const runtime = "nodejs"; // ensure Prisma runs in Node
 
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { dishesByCategory } from "@/lib/dishes";
+import { dishesByCategoryDbFirst } from "@/lib/dishes";
 import { Dish, PowerUpsInput } from "@/lib/schemas";
 import { weightedSpin } from "@/lib/scoring";
-import { withRateLimit } from "@/lib/rateLimit";
 import { prisma } from "@/lib/db";
 
-const Body = z.object({
-  categories: z.array(z.string().min(1)).min(1).max(6),
-  locked: z.array(z.object({ index: z.number().int().min(0).max(5), dishId: z.string() })).optional(),
-  powerups: z.object({ healthy: z.boolean().optional(), cheap: z.boolean().optional(), max30m: z.boolean().optional() }).optional(),
-  partyId: z.string().optional()
-});
+// -------- Helper coercers --------
+const coerceCategories = (v: unknown): string[] => {
+  if (Array.isArray(v)) return v.filter((x) => typeof x === "string") as string[];
+  if (typeof v === "string") {
+    return v
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
+const Body = z
+  .object({
+    categories: z
+      .preprocess(coerceCategories, z.array(z.string().min(1)).min(1).max(6)),
+    locked: z
+      .array(
+        z.union([
+          z.object({
+            index: z.number().int().min(0).max(5),
+            dishId: z.string(),
+          }),
+          z.number().int().min(0).max(5), // allow index-only; we'll normalize
+        ])
+      )
+      .optional()
+      .default([]),
+    powerups: z
+      .object({
+        healthy: z.boolean().optional(),
+        cheap: z.boolean().optional(),
+        max30m: z.boolean().optional(),
+      })
+      .optional()
+      .default({}),
+  })
+  .passthrough(); // ignore extra fields from the client
 
 export async function POST(req: NextRequest) {
   try {
-    const rateRes = withRateLimit(req);
-    if (rateRes) return rateRes;
+    const raw = await req.json().catch(() => ({}));
+    const parsed = Body.safeParse(raw);
 
-    const json = await req.json().catch(() => ({}));
-    const parsed = Body.safeParse(json);
     if (!parsed.success) {
-      return Response.json({ code: "BAD_REQUEST", issues: parsed.error.issues }, { status: 400 });
+      // Helpful during dev: return issues so you can see exactly why it failed in Network tab
+      return Response.json({ issues: parsed.error.issues }, { status: 400 });
     }
-    const { categories, locked = [], powerups = {} as PowerUpsInput } = parsed.data;
 
-    const reels: Dish[][] = categories.map((c) => dishesByCategory(c));
-    const selection = weightedSpin(reels, locked, powerups);
+    const { categories, powerups } = parsed.data as {
+      categories: string[];
+      powerups: PowerUpsInput;
+      locked: Array<number | { index: number; dishId: string }>;
+    };
 
-    // Persist spin (best-effort)
+    // Normalize locked -> only objects with {index,dishId}
+    const lockedInput = (parsed.data.locked ?? []).flatMap((x) => {
+      if (typeof x === "number") return []; // index-only not used by server spin
+      if (x && typeof x === "object" && "index" in x && "dishId" in x) return [x];
+      return [];
+    }) as Array<{ index: number; dishId: string }>;
+
+    // Build reels (DB-first with static fallback inside the helper)
+    const reels: Dish[][] = [];
+    for (const c of categories) reels.push(await dishesByCategoryDbFirst(c));
+
+    // Spin
+    const selection = weightedSpin(reels, lockedInput, powerups);
+
+    // Persist (non-fatal if it fails)
     try {
       await prisma.spin.create({
         data: {
           reelsJson: JSON.stringify(reels.map((r) => r.map((d) => d.id))),
-          lockedJson: JSON.stringify(locked),
+          lockedJson: JSON.stringify(lockedInput),
           resultDishIds: JSON.stringify(selection.map((d) => d.id)),
-          powerupsJson: JSON.stringify(powerups)
-        }
+          powerupsJson: JSON.stringify(powerups),
+        },
       });
     } catch (e) {
-      // Log but don't fail the request in stub/local mode
       console.warn("spin persist failed (non-fatal):", (e as Error).message);
     }
 
-    return Response.json({
-      spinId: `spin_${Date.now()}`,
-      reels,
-      selection
-    });
+    return Response.json({ spinId: `spin_${Date.now()}`, reels, selection });
   } catch (err) {
     console.error("spin route error:", err);
     return Response.json(
-      { code: "INTERNAL_ERROR", message: (err as Error).message ?? "unknown" },
+      { code: "INTERNAL_ERROR", message: (err as Error)?.message ?? "unknown" },
       { status: 500 }
     );
   }
