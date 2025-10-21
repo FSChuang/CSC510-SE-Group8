@@ -1,10 +1,9 @@
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  // Use SQLite by default in Codespaces. If you later switch to Postgres,
-  // change `provider` to "postgresql" and update DATABASE_URL accordingly.
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
@@ -21,24 +20,27 @@ model User {
 }
 
 model Category {
-  id     String  @id
-  name   String  @unique
-  tags   String
-  dishes Dish[]
+  id   String @id        // e.g. "main", "veggie"
+  name String @unique
+  tags String
+  // IMPORTANT: no dishes[] field here — keeps Dish.category scalar
 }
 
 model Dish {
-  id         String    @id
-  name       String
-  categoryId String
-  category   Category  @relation(fields: [categoryId], references: [id])
-  tags       String
-  costBand   Int
-  timeBand   Int
-  isHealthy  Boolean
-  allergens  String
-  ytQuery    String
-  favorites  Favorite[]
+  id        String   @id
+  name      String
+  category  String
+  tags      String
+  allergens String
+  costBand  Int
+  timeBand  Int
+  isHealthy Boolean  @default(false)
+  ytQuery   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // add this line so Favorite.dish has an opposite side
+  favorites Favorite[]
 }
 
 model Spin {
@@ -53,13 +55,13 @@ model Spin {
 }
 
 model Party {
-  id             String       @id @default(cuid())
-  code           String       @unique
-  hostId         String?
-  isActive       Boolean      @default(true)
+  id              String       @id @default(cuid())
+  code            String       @unique
+  hostId          String?
+  isActive        Boolean      @default(true)
   constraintsJson String
-  createdAt      DateTime     @default(now())
-  members        PartyMember[]
+  createdAt       DateTime     @default(now())
+  members         PartyMember[]
 }
 
 model PartyMember {
@@ -76,6 +78,7 @@ model Favorite {
   id     String @id @default(cuid())
   userId String
   user   User   @relation(fields: [userId], references: [id])
+
   dishId String
   dish   Dish   @relation(fields: [dishId], references: [id])
 }

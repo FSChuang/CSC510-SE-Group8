@@ -3,13 +3,8 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const categories = [
-  { id: "main", name: "Main", tags: "hearty,protein" },
-  { id: "veggie", name: "Veggie", tags: "vegetarian,greens" },
-  { id: "soup", name: "Soup", tags: "warm,comfort" },
-  { id: "meat", name: "Meat", tags: "protein" },
-  { id: "dessert", name: "Dessert", tags: "sweet" }
-];
+// canonical categories (plain strings in schema)
+const CATEGORIES = ["main", "veggie", "soup", "meat", "dessert"];
 
 const MAIN = [
   ["Margherita Pizza", 2, 2, false, ["gluten", "dairy"], "margherita pizza"],
@@ -80,31 +75,28 @@ const DESSERT = [
   ["Banana Bread", 1, 2, false, ["gluten"], "banana bread"]
 ];
 
-function asDishes(catId, arr) {
+function asDishes(category, arr) {
   return arr.map((a) => ({
-    id: `${catId}_${a[0].toLowerCase().replace(/[^a-z0-9]+/g, "_")}`.slice(0, 50),
     name: a[0],
-    categoryId: catId,
-    tags: [],
+    category,                 // <-- string, matches schema
+    tags: [],                 // will be JSON.stringified
     costBand: a[1],
     timeBand: a[2],
     isHealthy: a[3],
-    allergens: a[4],
+    allergens: a[4],          // will be JSON.stringified
     ytQuery: a[5]
   }));
 }
 
-async function main() {
-  console.log("Seeding…");
-  for (const c of categories) {
-    await prisma.category.upsert({
-      where: { id: c.id },
-      update: {},
-      create: c
-    });
-  }
+function dId(d) {
+  return `${d.category}_${d.name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`.slice(0, 50);
+}
 
-  const all = [
+async function main() {
+  console.log("Seeding Dish table…");
+
+  // Build base set
+  const base = [
     ...asDishes("main", MAIN),
     ...asDishes("veggie", VEGGIE),
     ...asDishes("soup", SOUP),
@@ -112,53 +104,63 @@ async function main() {
     ...asDishes("dessert", DESSERT)
   ];
 
-  // Expand to ~85 dishes with variants
+  // Add variants to reach ~85 rows
   const extras = [];
   const variants = ["(Spicy)", "(Low-carb)", "(Gluten-free)"];
-  for (const base of all) {
+  for (const b of base) {
     for (const v of variants) {
-      if (extras.length + all.length >= 85) break;
-      const isGF = v.includes("Gluten-free");
+      if (extras.length + base.length >= 85) break;
       extras.push({
-        ...base,
-        id: `${base.id}_${v.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`.slice(0, 50),
-        name: `${base.name} ${v}`,
-        tags: [...base.tags, v.replace(/[()]/g, "").toLowerCase()],
-        isHealthy: base.isHealthy || v.includes("Low-carb") || isGF,
-        allergens: isGF ? base.allergens.filter((x) => x !== "gluten") : base.allergens
+        ...b,
+        name: `${b.name} ${v}`,
+        tags: [...b.tags, v.replace(/[()]/g, "").toLowerCase()],
+        isHealthy: b.isHealthy || v.includes("Low-carb") || v.includes("Gluten-free"),
+        allergens: v.includes("Gluten-free") ? b.allergens.filter((x) => x !== "gluten") : b.allergens
       });
     }
-    if (extras.length + all.length >= 85) break;
+    if (extras.length + base.length >= 85) break;
   }
 
-  const final = [...all, ...extras].slice(0, 85);
+  const final = [...base, ...extras].slice(0, 85);
 
+  // Upsert rows (tags/allergens as JSON strings)
+  let n = 0;
   for (const d of final) {
     await prisma.dish.upsert({
-      where: { id: d.id },
-      update: {},
-      create: {
-        id: d.id,
+      where: { id: dId(d) },
+      update: {
         name: d.name,
-        categoryId: d.categoryId,
-        tags: d.tags.join(","),
+        category: d.category,
+        tags: JSON.stringify(d.tags ?? []),
+        allergens: JSON.stringify(d.allergens ?? []),
         costBand: d.costBand,
         timeBand: d.timeBand,
         isHealthy: d.isHealthy,
-        allergens: d.allergens.join(","),
-        ytQuery: d.ytQuery
+        ytQuery: d.ytQuery ?? null
+      },
+      create: {
+        id: dId(d),
+        name: d.name,
+        category: d.category,
+        tags: JSON.stringify(d.tags ?? []),
+        allergens: JSON.stringify(d.allergens ?? []),
+        costBand: d.costBand,
+        timeBand: d.timeBand,
+        isHealthy: d.isHealthy,
+        ytQuery: d.ytQuery ?? null
       }
     });
+    n++;
   }
 
-  console.log(`Seeded categories=${categories.length}, dishes=${final.length}`);
+  console.log(`Seeded dishes=${n}`);
 }
 
-try {
-  await main();
-} catch (e) {
-  console.error(e);
-  process.exit(1);
-} finally {
-  await prisma.$disconnect();
-}
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
