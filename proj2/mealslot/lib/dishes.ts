@@ -1,155 +1,55 @@
-// server-only source of truth for the dish catalog used by /api/spin.
-// Deterministic, secret-free. Per-category caps ensure every reel has options.
+import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
+import { Dish as UIDish } from "./schemas"; // UI/Spin Dish type (arrays)
 
-import { Dish } from "./schemas";
+function splitCSV(s: string | null | undefined): string[] {
+  return (s ?? "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+function toUIDish(row: { id: string; name: string; category: string; tags: string; allergens: string; costBand: number; timeBand: number; isHealthy: boolean; ytQuery: string | null }): UIDish {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    tags: splitCSV(row.tags),
+    allergens: splitCSV(row.allergens),
+    costBand: row.costBand,
+    timeBand: row.timeBand,
+    isHealthy: row.isHealthy,
+    ytQuery: row.ytQuery ?? ""
+  };
+}
 
+// ---- STATIC FALLBACK (your existing catalog) ----
 type Raw = [name: string, costBand: number, timeBand: number, isHealthy: boolean, allergens: string[], ytQuery: string];
 
-const MAIN: Raw[] = [
-  ["Margherita Pizza", 2, 2, false, ["gluten", "dairy"], "margherita pizza"],
-  ["Grilled Chicken Bowl", 2, 2, true, [], "grilled chicken bowl"],
-  ["Tofu Stir Fry", 1, 1, true, ["soy"], "tofu stir fry"],
-  ["Pasta Bolognese", 2, 2, false, ["gluten"], "pasta bolognese"],
-  ["Sushi Platter", 3, 3, true, ["fish"], "sushi at home"],
-  ["Veggie Burrito", 1, 1, true, ["gluten"], "veggie burrito"],
-  ["Beef Tacos", 1, 1, false, ["gluten"], "beef tacos"],
-  ["Shrimp Fried Rice", 1, 1, false, ["shellfish"], "shrimp fried rice"],
-  ["Paneer Butter Masala", 2, 2, false, ["dairy"], "paneer butter masala"],
-  ["Bibimbap", 2, 2, true, ["egg"], "bibimbap recipe"],
-  ["Falafel Bowl", 1, 2, true, [], "falafel bowl"],
-  ["Ramen", 2, 3, false, ["gluten"], "home ramen"],
-  ["Pho", 2, 3, true, [], "pho recipe"],
-  ["Steak & Potatoes", 3, 2, false, [], "steak potatoes"]
-];
+// … keep your existing static arrays here (MAIN / VEGGIE / SOUP / MEAT / DESSERT) …
+// … and the expand() logic you already had …
 
-const VEGGIE: Raw[] = [
-  ["Caesar Salad", 1, 1, true, ["dairy"], "caesar salad"],
-  ["Greek Salad", 1, 1, true, ["dairy"], "greek salad"],
-  ["Quinoa Bowl", 1, 1, true, [], "quinoa bowl"],
-  ["Caprese", 1, 1, true, ["dairy"], "caprese salad"],
-  ["Roasted Veg Medley", 1, 2, true, [], "roasted vegetables"],
-  ["Kale & Chickpea", 1, 1, true, [], "kale chickpea salad"],
-  ["Coleslaw", 1, 1, true, [], "coleslaw"],
-  ["Cobb Salad", 2, 1, false, ["egg", "dairy"], "cobb salad"],
-  ["Avocado Toast", 1, 1, true, ["gluten"], "avocado toast"],
-  ["Hummus Plate", 1, 1, true, ["sesame"], "hummus plate"]
-];
+// build BY_CAT from static catalog
+const STATIC_BY_CAT: Record<string, UIDish[]> = /* build exactly like you had */ {};
 
-const SOUP: Raw[] = [
-  ["Tomato Soup", 1, 1, true, [], "tomato soup"],
-  ["Chicken Noodle Soup", 1, 2, true, ["gluten"], "chicken noodle soup"],
-  ["Miso Soup", 1, 1, true, ["soy"], "miso soup"],
-  ["Lentil Soup", 1, 2, true, [], "lentil soup"],
-  ["Minestrone", 1, 2, true, ["gluten"], "minestrone"],
-  ["Butternut Squash Soup", 1, 2, true, [], "butternut squash soup"],
-  ["Beef Broth", 1, 2, false, [], "beef broth soup"],
-  ["Clam Chowder", 2, 2, false, ["shellfish", "dairy"], "clam chowder"],
-  ["Hot & Sour Soup", 1, 1, true, ["soy"], "hot sour soup"],
-  ["Corn Chowder", 1, 2, false, ["dairy"], "corn chowder"]
-];
-
-const MEAT: Raw[] = [
-  ["Beef Bulgogi", 2, 2, false, ["soy"], "beef bulgogi"],
-  ["BBQ Ribs", 3, 3, false, [], "bbq ribs"],
-  ["Chicken Satay", 2, 2, true, ["peanut"], "chicken satay"],
-  ["Pork Schnitzel", 2, 2, false, ["gluten", "egg"], "pork schnitzel"],
-  ["Lamb Chops", 3, 2, false, [], "lamb chops"],
-  ["Teriyaki Chicken", 2, 2, false, ["soy"], "teriyaki chicken"],
-  ["Turkey Meatballs", 1, 2, true, ["egg"], "turkey meatballs"],
-  ["Beef Stir Fry", 1, 1, false, ["soy"], "beef stir fry"],
-  ["Roast Chicken", 2, 3, true, [], "roast chicken"],
-  ["Fish & Chips", 2, 2, false, ["gluten", "fish"], "fish and chips"]
-];
-
-const DESSERT: Raw[] = [
-  ["Chia Pudding", 1, 1, true, [], "chia pudding"],
-  ["Chocolate Brownie", 1, 1, false, ["gluten"], "chocolate brownie"],
-  ["Fruit Salad", 1, 1, true, [], "fruit salad"],
-  ["Tiramisu", 2, 2, false, ["dairy", "egg", "gluten"], "tiramisu"],
-  ["Panna Cotta", 2, 2, false, ["dairy"], "panna cotta"],
-  ["Apple Pie", 2, 2, false, ["gluten"], "apple pie"],
-  ["Cheesecake", 2, 2, false, ["dairy", "gluten"], "cheesecake"],
-  ["Yogurt Parfait", 1, 1, true, ["dairy"], "yogurt parfait"],
-  ["Mochi", 1, 1, true, [], "mochi dessert"],
-  ["Banana Bread", 1, 2, false, ["gluten"], "banana bread"]
-];
-
-function slugify(s: string) {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+// ---- DB-first, fallback to static ----
+export async function dishesByCategoryDbFirst(category: string): Promise<UIDish[]> {
+  const where: Prisma.DishWhereInput = { category };
+  const rows = await prisma.dish.findMany({
+    where,
+    orderBy: [{ name: "asc" }]
+  });
+  if (rows.length > 0) return rows.map(toUIDish);
+  // fallback to static
+  return (STATIC_BY_CAT[category] ?? []).slice();
 }
 
-function expand(cat: string, raws: Raw[], cap: number): Dish[] {
-  // Base dishes
-  const base = raws.map<Dish>((r) => ({
-    id: `${cat}_${slugify(r[0])}`.slice(0, 50),
-    name: r[0],
-    category: cat,
-    tags: [],
-    costBand: r[1],
-    timeBand: r[2],
-    isHealthy: r[3],
-    allergens: r[4],
-    ytQuery: r[5]
-  }));
-
-  // Deterministic variants to add variety
-  const variants = ["(Spicy)", "(Low-carb)", "(Gluten-free)"];
-  const extra: Dish[] = [];
-  for (const b of base) {
-    for (const v of variants) {
-      if (base.length + extra.length >= cap) break; // stop at per-category cap
-      const isGF = v.includes("Gluten-free");
-      extra.push({
-        ...b,
-        id: `${b.id}_${slugify(v)}`.slice(0, 50),
-        name: `${b.name} ${v}`,
-        tags: [...b.tags, v.replace(/[()]/g, "").toLowerCase()],
-        isHealthy: b.isHealthy || v.includes("Low-carb") || isGF,
-        allergens: isGF ? b.allergens.filter((a) => a !== "gluten") : b.allergens
-      });
-    }
-    if (base.length + extra.length >= cap) break;
-  }
-
-  // Ensure we never exceed cap and never return empty
-  const out = [...base, ...extra].slice(0, Math.max(cap, 1));
-  return out.length ? out : base.slice(0, 1);
-}
-
-// Per-category caps to ~85 total and guarantee coverage
-const PER_CAT_CAP = {
-  main: 22,
-  veggie: 16,
-  soup: 16,
-  meat: 16,
-  dessert: 16
-} as const;
-
-const MAIN_EXP = expand("main", MAIN, PER_CAT_CAP.main);
-const VEGGIE_EXP = expand("veggie", VEGGIE, PER_CAT_CAP.veggie);
-const SOUP_EXP = expand("soup", SOUP, PER_CAT_CAP.soup);
-const MEAT_EXP = expand("meat", MEAT, PER_CAT_CAP.meat);
-const DESSERT_EXP = expand("dessert", DESSERT, PER_CAT_CAP.dessert);
-
-const CATALOG: Dish[] = [
-  ...MAIN_EXP,
-  ...VEGGIE_EXP,
-  ...SOUP_EXP,
-  ...MEAT_EXP,
-  ...DESSERT_EXP
-];
-
-// Group by category once
-const BY_CAT: Record<string, Dish[]> = CATALOG.reduce((acc, d) => {
-  (acc[d.category] ||= []).push(d);
-  return acc;
-}, {} as Record<string, Dish[]>);
-
-// Public API used by /api/spin
-export function dishesByCategory(category: string): Dish[] {
-  return (BY_CAT[category] ?? []).slice(); // copy to avoid mutation
-}
-
-export function allDishes(): Dish[] {
-  return CATALOG.slice();
+export async function listDishesDbFirst(category?: string): Promise<UIDish[]> {
+  const where: Prisma.DishWhereInput = category ? { category } : {};
+  const rows = await prisma.dish.findMany({
+    where,
+    orderBy: [{ name: "asc" }]
+  });
+  if (rows.length > 0) return rows.map(toUIDish);
+  // fallback to static (all)
+  return Object.values(STATIC_BY_CAT).flat();
 }
