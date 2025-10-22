@@ -7,19 +7,19 @@ import { cn } from "./ui/cn";
 
 type Locked = { index: number; dishId: string };
 type Props = {
-  categories: string[];
+  reelCount: number; // number of reels
   onSpin(locked: Locked[]): Promise<void> | void;
   cooldownMs: number; // remaining ms from parent
   busy?: boolean;
   selection?: Dish[];
 };
 
-export function SlotMachine({ categories, onSpin, cooldownMs, busy, selection }: Props) {
+export function SlotMachine({ reelCount, onSpin, cooldownMs, busy, selection }: Props) {
   const [locked, setLocked] = useState<Record<number, string>>({});
 
   useEffect(() => {
     setLocked({});
-  }, [categories.join("|")]);
+  }, [reelCount]);
 
   const lockedArray: Locked[] = useMemo(
     () =>
@@ -31,11 +31,11 @@ export function SlotMachine({ categories, onSpin, cooldownMs, busy, selection }:
 
   const dishesByIndex: (Dish | undefined)[] = useMemo(() => {
     const out: (Dish | undefined)[] = [];
-    for (let i = 0; i < categories.length; i++) {
+    for (let i = 0; i < reelCount; i++) {
       out.push(selection?.[i]);
     }
     return out;
-  }, [categories.length, selection]);
+  }, [reelCount, selection]);
 
   useEffect(() => {
     const next: Record<number, string> = {};
@@ -60,8 +60,7 @@ export function SlotMachine({ categories, onSpin, cooldownMs, busy, selection }:
     });
   };
 
-  // ✅ allow spin when cooldown is <= 0 (not strictly === 0)
-  const canSpin = !busy && cooldownMs <= 0 && categories.length > 0;
+  const canSpin = !busy && cooldownMs <= 0 && reelCount > 0;
 
   return (
     <section className="rounded-2xl border bg-white p-4 shadow-sm">
@@ -72,7 +71,7 @@ export function SlotMachine({ categories, onSpin, cooldownMs, busy, selection }:
         </div>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {categories.map((_, i) => (
+        {Array.from({ length: reelCount }, (_, i) => (
           <SlotReel
             key={i}
             dish={dishesByIndex[i]}

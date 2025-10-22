@@ -22,6 +22,29 @@ function toUIDish(row: { id: string; name: string; category: string; tags: strin
   };
 }
 
+const parseArrayField = (v: any): string[] => {
+	if (!v) return [];
+	if (Array.isArray(v)) {
+		// sometimes Prisma returns array of one string like '["dairy","gluten"]'
+		if (v.length === 1 && v[0].startsWith('["')) {
+			return v[0]
+				.replace(/^\[|]$/g, '')          // remove [ and ]
+				.split(',')
+				.map((s: string) => s.replace(/"/g, '').trim().toLowerCase());
+		}
+		return v.map((s: string) => s.trim().toLowerCase());
+	}
+	if (typeof v === "string") {
+		try {
+			const parsed = JSON.parse(v);
+			if (Array.isArray(parsed)) return parsed.map((s: string) => s.trim().toLowerCase());
+		} catch {}
+		return v.split(',').map((s: string) => s.trim().toLowerCase());
+	}
+	return [];
+};
+
+
 // ---- STATIC FALLBACK (your existing catalog) ----
 type Raw = [name: string, costBand: number, timeBand: number, isHealthy: boolean, allergens: string[], ytQuery: string];
 
@@ -32,16 +55,45 @@ type Raw = [name: string, costBand: number, timeBand: number, isHealthy: boolean
 const STATIC_BY_CAT: Record<string, UIDish[]> = /* build exactly like you had */ {};
 
 // ---- DB-first, fallback to static ----
-export async function dishesByCategoryDbFirst(category: string): Promise<UIDish[]> {
-  const where: Prisma.DishWhereInput = { category };
-  const rows = await prisma.dish.findMany({
-    where,
-    orderBy: [{ name: "asc" }]
+export async function dishesByCategoryDbFirst(
+	category: string,
+	tags: string[] = [],
+	allergens: string[] = []
+): Promise<UIDish[]> {
+	const where: Prisma.DishWhereInput = { category };
+	const rows = await prisma.dish.findMany({
+		where,
+		orderBy: [{ name: "asc" }]
+	});
+
+	if (rows.length === 0) {
+		return (STATIC_BY_CAT[category] ?? []).slice();
+	}
+
+	const parse = (v: any) => {
+		if (!v && v !== "") return [];
+		try {
+			const arr = JSON.parse(v);
+			return Array.isArray(arr) ? arr.map(String) : [];
+		} catch {
+			return String(v).split(",").map(s => s.trim()).filter(Boolean);
+		}
+	};
+
+  const filtered = rows.filter(r => {
+    const rTags = parseArrayField(r.tags);
+    const rAllergens = parseArrayField(r.allergens);
+    console.log("Row Allergens")
+    console.log(rAllergens)
+    console.log("Selected Allergens")
+    console.log(allergens)
+    return tags.every(t => rTags.includes(t.toLowerCase())) &&
+          allergens.every(a => rAllergens.includes(a.toLowerCase()));
   });
-  if (rows.length > 0) return rows.map(toUIDish);
-  // fallback to static
-  return (STATIC_BY_CAT[category] ?? []).slice();
+
+	return filtered.map(toUIDish);
 }
+
 
 export async function listDishesDbFirst(category?: string): Promise<UIDish[]> {
   const where: Prisma.DishWhereInput = category ? { category } : {};
