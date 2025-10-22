@@ -9,21 +9,20 @@ import { weightedSpin } from "@/lib/scoring";
 import { prisma } from "@/lib/db";
 
 // -------- Helper coercers --------
-const coerceCategories = (v: unknown): string[] => {
-  if (Array.isArray(v)) return v.filter((x) => typeof x === "string") as string[];
-  if (typeof v === "string") {
-    return v
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
-  return [];
-};
+// const coerceCategories = (v: unknown): string[] => {
+//   if (Array.isArray(v)) return v.filter((x) => typeof x === "string") as string[];
+//   if (typeof v === "string") {
+//     return v
+//       .split(",")
+//       .map((s) => s.trim())
+//       .filter(Boolean);
+//   }
+//   return [];
+// };
 
 const Body = z
   .object({
-    categories: z
-      .preprocess(coerceCategories, z.array(z.string().min(1)).min(1).max(6)),
+    category: z.string().min(1).optional(),
     locked: z
       .array(
         z.union([
@@ -44,6 +43,7 @@ const Body = z
       })
       .optional()
       .default({}),
+	  dishCount: z.number().int().min(1).optional()
   })
   .passthrough(); // ignore extra fields from the client
 
@@ -53,31 +53,32 @@ export async function POST(req: NextRequest) {
     const parsed = Body.safeParse(raw);
 
     if (!parsed.success) {
-      // Helpful during dev: return issues so you can see exactly why it failed in Network tab
       return Response.json({ issues: parsed.error.issues }, { status: 400 });
     }
 
-    const { categories, powerups } = parsed.data as {
-      categories: string[];
+    const { category, powerups, locked, dishCount } = parsed.data as {
+      category: string;
       powerups: PowerUpsInput;
       locked: Array<number | { index: number; dishId: string }>;
+      dishCount: number;
     };
 
-    // Normalize locked -> only objects with {index,dishId}
-    const lockedInput = (parsed.data.locked ?? []).flatMap((x) => {
-      if (typeof x === "number") return []; // index-only not used by server spin
+    // Normalize locked
+    const lockedInput = (locked ?? []).flatMap((x) => {
+      if (typeof x === "number") return [];
       if (x && typeof x === "object" && "index" in x && "dishId" in x) return [x];
       return [];
     }) as Array<{ index: number; dishId: string }>;
 
-    // Build reels (DB-first with static fallback inside the helper)
     const reels: Dish[][] = [];
-    for (const c of categories) reels.push(await dishesByCategoryDbFirst(c));
+    for (let i = 0; i < dishCount; i++) {
+      // dishesByCategoryDbFirst now takes a count parameter
+      const dishes = await dishesByCategoryDbFirst(category);
+      reels.push(dishes);
+    }
 
-    // Spin
     const selection = weightedSpin(reels, lockedInput, powerups);
 
-    // Persist (non-fatal if it fails)
     try {
       await prisma.spin.create({
         data: {
@@ -100,3 +101,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

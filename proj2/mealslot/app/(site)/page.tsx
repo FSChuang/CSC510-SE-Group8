@@ -60,7 +60,7 @@ function HomePage() {
     const res = await fetch("/api/spin", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ categories: category ? [category] : [], locked, powerups })
+      body: JSON.stringify({ category, locked, powerups, dishCount })
     });
     setBusy(false);
     if (!res.ok) {
@@ -69,6 +69,7 @@ function HomePage() {
       return;
     }
     const data = await res.json();
+    console.log(data)
     setSelection(data.selection);
     setRecipes(null);
     setVenues(null);
@@ -105,16 +106,16 @@ function HomePage() {
         <h2 className="mb-2 text-lg font-semibold">Choose Category</h2>
         <div className="flex flex-wrap gap-2">
           {["Breakfast", "Lunch", "Dinner", "Dessert"].map((c) => {
-            const active = category === c;
+            const active = category === c.toLowerCase();
             return (
               <button
-                key={c}
+                key={c.toLowerCase()}
                 className={cn(
                   "rounded-full border px-3 py-1 text-sm",
                   active ? "bg-neutral-900 text-white" : "bg-white"
                 )}
                 // clicking a different option selects it; clicking the active option will deselect (set to "")
-                onClick={() => setCategory((prev) => (prev === c ? "" : c))}
+                onClick={() => setCategory((prev) => (prev === c.toLowerCase() ? "" : c.toLowerCase()))}
                 aria-pressed={active}
               >
                 {c}
