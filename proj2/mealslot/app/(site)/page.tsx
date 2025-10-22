@@ -63,7 +63,7 @@ function HomePage() {
     const res = await fetch("/api/spin", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ category, locked, powerups, dishCount })
+      body: JSON.stringify({ category, tags: selectedTags, allergens: selectedAllergens, locked, powerups, dishCount })
     });
     setBusy(false);
     if (!res.ok) {
@@ -72,7 +72,7 @@ function HomePage() {
       return;
     }
     const data = await res.json();
-    console.log(data)
+
     setSelection(data.selection);
     setRecipes(null);
     setVenues(null);
@@ -137,7 +137,6 @@ function HomePage() {
 
       <DishCountInput value={dishCount} onChange={setDishCount} />
 
-      {/* NEW: pass selection down so reels always match server result */}
       <SlotMachine
         reelCount={dishCount}
         onSpin={onSpin}

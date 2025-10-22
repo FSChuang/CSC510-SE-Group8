@@ -8,21 +8,11 @@ import { Dish, PowerUpsInput } from "@/lib/schemas";
 import { weightedSpin } from "@/lib/scoring";
 import { prisma } from "@/lib/db";
 
-// -------- Helper coercers --------
-// const coerceCategories = (v: unknown): string[] => {
-//   if (Array.isArray(v)) return v.filter((x) => typeof x === "string") as string[];
-//   if (typeof v === "string") {
-//     return v
-//       .split(",")
-//       .map((s) => s.trim())
-//       .filter(Boolean);
-//   }
-//   return [];
-// };
-
 const Body = z
   .object({
     category: z.string().min(1).optional(),
+    tags: z.array(z.string()).optional().default([]),
+    allergens: z.array(z.string()).optional().default([]),
     locked: z
       .array(
         z.union([
@@ -43,9 +33,9 @@ const Body = z
       })
       .optional()
       .default({}),
-	  dishCount: z.number().int().min(1).optional()
+    dishCount: z.number().int().min(1).optional(),
   })
-  .passthrough(); // ignore extra fields from the client
+  .passthrough();
 
 export async function POST(req: NextRequest) {
   try {
@@ -56,14 +46,26 @@ export async function POST(req: NextRequest) {
       return Response.json({ issues: parsed.error.issues }, { status: 400 });
     }
 
-    const { category, powerups, locked, dishCount } = parsed.data as {
-      category: string;
+    const {
+      category,
+      tags,
+      allergens,
+      powerups,
+      locked,
+      dishCount,
+    } = parsed.data as {
+      category?: string;
+      tags: string[];
+      allergens: string[];
       powerups: PowerUpsInput;
       locked: Array<number | { index: number; dishId: string }>;
-      dishCount: number;
+      dishCount?: number;
     };
 
-    // Normalize locked
+    if (!category) {
+      return Response.json({ message: "category is required" }, { status: 400 });
+    }
+
     const lockedInput = (locked ?? []).flatMap((x) => {
       if (typeof x === "number") return [];
       if (x && typeof x === "object" && "index" in x && "dishId" in x) return [x];
@@ -71,9 +73,9 @@ export async function POST(req: NextRequest) {
     }) as Array<{ index: number; dishId: string }>;
 
     const reels: Dish[][] = [];
-    for (let i = 0; i < dishCount; i++) {
-      // dishesByCategoryDbFirst now takes a count parameter
-      const dishes = await dishesByCategoryDbFirst(category);
+    const count = dishCount ?? 1;
+    for (let i = 0; i < count; i++) {
+      const dishes = await dishesByCategoryDbFirst(category, tags, allergens);
       reels.push(dishes);
     }
 
@@ -101,4 +103,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
