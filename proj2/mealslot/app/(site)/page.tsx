@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { SlotMachine } from "@/components/SlotMachine";
 import { PowerUps } from "@/components/PowerUps";
+import FilterMenu from "@/components/FilterMenu";
 import DishCountInput from "@/components/DishCountInput";
 import { Dish, PowerUpsInput, RecipeJSON } from "@/lib/schemas";
 import { cn } from "@/components/ui/cn";
@@ -25,6 +26,8 @@ type Venue = {
 function HomePage() {
   const [category, setCategory] = useState<string>("Breakfast");
   const [dishCount, setDishCount] = useState(0);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedAllergens, setSelectedAllergens] = useState<string[]>([]);
   const [powerups, setPowerups] = useState<PowerUpsInput>({});
   const [selection, setSelection] = useState<Dish[]>([]);
   const [busy, setBusy] = useState(false);
@@ -124,6 +127,11 @@ function HomePage() {
           })}
         </div>
       </section>
+
+      <FilterMenu
+        onTagChange={setSelectedTags}
+        onAllergenChange={setSelectedAllergens}
+      />
 
       <PowerUps value={powerups} onChange={setPowerups} />
 

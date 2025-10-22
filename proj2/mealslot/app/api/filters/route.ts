@@ -13,13 +13,37 @@ export async function GET(req: NextRequest) {
 		});
 
 		// Flatten CSV arrays and get unique values
-		const allTags = Array.from(
-			new Set(dishes.flatMap(d => (d.tags ? d.tags.split(",") : [])))
-		).filter(Boolean);
+        const allTags = Array.from(
+            new Set(
+                dishes.flatMap(d => {
+                    if (!d.tags) return [];
+                    try {
+                        // parse JSON array
+                        const parsed = JSON.parse(d.tags);
+                        if (Array.isArray(parsed)) return parsed;
+                        return [];
+                    } catch {
+                        // fallback if it's just CSV string
+                        return d.tags.split(",").map(s => s.trim());
+                    }
+                })
+            )
+        ).filter(Boolean);
 
-		const allAllergens = Array.from(
-			new Set(dishes.flatMap(d => (d.allergens ? d.allergens.split(",") : [])))
-		).filter(Boolean);
+        const allAllergens = Array.from(
+            new Set(
+                dishes.flatMap(d => {
+                    if (!d.allergens) return [];
+                    try {
+                        const parsed = JSON.parse(d.allergens);
+                        if (Array.isArray(parsed)) return parsed;
+                        return [];
+                    } catch {
+                        return d.allergens.split(",").map(s => s.trim());
+                    }
+                })
+            )
+        ).filter(Boolean);
 
 		return Response.json({ tags: allTags, allergens: allAllergens });
 	} catch (err) {
