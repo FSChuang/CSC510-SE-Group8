@@ -1,14 +1,14 @@
 import "server-only";
-export const runtime = "nodejs"; // Prisma + ws client => Node runtime
+export const runtime = "nodejs";
 
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { dishesByCategory } from "@/lib/dishes";
+import { dishesByCategoryDbFirst } from "@/lib/dishes";
+import { Dish, PowerUpsInput } from "@/lib/schemas";
 import { weightedSpin } from "@/lib/scoring";
-import { PowerUpsInput, Dish } from "@/lib/schemas";
 import { prisma } from "@/lib/db";
 
-// Optional WS broadcast from server → Socket.IO hub
+// Optional WS broadcast to your Socket.IO hub
 let ioClient: typeof import("socket.io-client") | null = null;
 async function emitWs(code: string, payload: any) {
   try {
@@ -29,9 +29,22 @@ async function emitWs(code: string, payload: any) {
 
 const Body = z.object({
   code: z.string().length(6),
-  categories: z.array(z.string().min(1)).min(1).max(6),
-  locked: z.array(z.object({ index: z.number().int().min(0).max(5), dishId: z.string() })).optional(),
-  powerups: z.object({ healthy: z.boolean().optional(), cheap: z.boolean().optional(), max30m: z.boolean().optional() }).optional()
+  category: z.string().min(1),
+  num: z.number().int().min(1).max(12).default(3),
+  tags: z.array(z.string()).optional().default([]),
+  allergens: z.array(z.string()).optional().default([]),
+  locked: z
+    .array(z.object({ index: z.number().int().min(0), dishId: z.string() }))
+    .optional()
+    .default([]),
+  powerups: z
+    .object({
+      healthy: z.boolean().optional(),
+      cheap: z.boolean().optional(),
+      max30m: z.boolean().optional(),
+    })
+    .optional()
+    .default({}),
 });
 
 export async function POST(req: NextRequest) {
@@ -40,23 +53,37 @@ export async function POST(req: NextRequest) {
     const parsed = Body.safeParse(json);
     if (!parsed.success) return Response.json({ issues: parsed.error.issues }, { status: 400 });
 
-    const { code, categories, locked = [], powerups = {} as PowerUpsInput } = parsed.data;
-    const reels: Dish[][] = categories.map((c) => dishesByCategory(c));
-    const selection = weightedSpin(reels, locked, powerups);
+    const { code, category, num, tags, allergens, locked, powerups } = parsed.data;
+
+    const options: Dish[] = await dishesByCategoryDbFirst(category, tags, allergens);
+    if (!options.length) {
+      return Response.json(
+        { code: "NO_OPTIONS", message: "No dishes available for the selected filters." },
+        { status: 400 }
+      );
+    }
+
+    const reels: Dish[][] = Array.from({ length: num }, () => options);
+    const saneLocked = (locked ?? [])
+      .filter((l) => l.index >= 0 && l.index < num)
+      .map((l) => ({ index: l.index, dishId: l.dishId }));
+
+    const selection = weightedSpin(reels, saneLocked, powerups as PowerUpsInput);
 
     try {
       await prisma.spin.create({
         data: {
           reelsJson: JSON.stringify(reels.map((r) => r.map((d) => d.id))),
-          lockedJson: JSON.stringify(locked),
+          lockedJson: JSON.stringify(saneLocked),
           resultDishIds: JSON.stringify(selection.map((d) => d.id)),
-          powerupsJson: JSON.stringify(powerups)
-        }
+          powerupsJson: JSON.stringify(powerups),
+        },
       });
     } catch (e) {
       console.warn("party spin persist failed (non-fatal):", (e as Error).message);
     }
 
+    // Notify party clients
     emitWs(code, selection).catch(() => {});
 
     return Response.json({ spinId: `pty_spin_${Date.now()}`, reels, selection });

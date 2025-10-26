@@ -3,8 +3,14 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// canonical categories (plain strings in schema)
-const CATEGORIES = ["main", "veggie", "soup", "meat", "dessert"];
+/**
+ * We now treat model.Dish.category as the *meal* category:
+ *   "breakfast" | "lunch" | "dinner" | "dessert"
+ *
+ * We still build from your original course groupings (main|veggie|soup|meat|dessert),
+ * but only to infer a sensible meal category. We don't store the course
+ * anywhere except optionally as a tag (commented out below).
+ */
 
 const MAIN = [
   ["Margherita Pizza", 2, 2, false, ["gluten", "dairy"], "margherita pizza"],
@@ -32,7 +38,7 @@ const VEGGIE = [
   ["Kale & Chickpea", 1, 1, true, [], "kale chickpea salad"],
   ["Coleslaw", 1, 1, true, [], "coleslaw"],
   ["Cobb Salad", 2, 1, false, ["egg", "dairy"], "cobb salad"],
-  ["Avocado Toast", 1, 1, true, ["gluten"], "avocado toast"],
+  ["Avocado Toast", 1, 1, true, ["gluten"], "avocado toast"], // -> breakfast special-case
   ["Hummus Plate", 1, 1, true, ["sesame"], "hummus plate"]
 ];
 
@@ -75,79 +81,134 @@ const DESSERT = [
   ["Banana Bread", 1, 2, false, ["gluten"], "banana bread"]
 ];
 
-function asDishes(category, arr) {
+/** Explicit breakfast set: [name, costBand, timeBand, isHealthy, allergens[], ytQuery, course] */
+const BREAKFAST = [
+  ["Pancakes", 1, 1, false, ["gluten", "dairy", "egg"], "pancakes recipe", "main"],
+  ["Omelette", 1, 1, true, ["egg", "dairy"], "omelette recipe", "main"],
+  ["Breakfast Burrito", 1, 1, false, ["gluten", "egg", "dairy"], "breakfast burrito", "main"],
+  ["Oatmeal", 1, 1, true, [], "oatmeal recipe", "main"],
+  ["Smoothie Bowl", 1, 1, true, [], "smoothie bowl", "veggie"],
+  ["French Toast", 1, 1, false, ["gluten", "dairy", "egg"], "french toast", "main"],
+  ["Shakshuka", 1, 1, true, ["egg"], "shakshuka", "main"],
+  ["Granola Bowl", 1, 1, true, ["dairy"], "granola yogurt bowl", "dessert"],
+  ["Bagel & Lox", 2, 1, false, ["gluten", "fish", "dairy"], "bagel lox", "main"]
+];
+
+// ---------- helpers ----------
+
+function slug(s) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+}
+
+// Infer meal category from course + name
+function inferMealCategory(course, name) {
+  if (/avocado toast/i.test(name)) return "breakfast";
+  if (course === "dessert") return "dessert";
+  if (course === "soup" || course === "veggie") return "lunch";
+  if (course === "main" || course === "meat") return "dinner";
+  return "dinner";
+}
+
+function asDishes(course, arr, forceMeal) {
+  return arr.map((a) => {
+    const name = a[0];
+    return {
+      // model fields
+      id: "", // fill below
+      name,
+      category: forceMeal ?? inferMealCategory(course, name), // <-- meal category for UI
+      tags: [],            // CSV later
+      allergens: a[4],     // CSV later
+      costBand: a[1],
+      timeBand: a[2],
+      isHealthy: a[3],
+      ytQuery: a[5] ?? null
+      // If you want to keep the original "course" for debugging:
+      // tags: [course] // uncomment to store course as a tag
+    };
+  });
+}
+
+function asBreakfastDishes(arr) {
   return arr.map((a) => ({
+    id: "",
     name: a[0],
-    category,                 // <-- string, matches schema
-    tags: [],                 // will be JSON.stringified
+    category: "breakfast",
+    tags: [],            // or [a[6]] to store course as a tag
+    allergens: a[4],
     costBand: a[1],
     timeBand: a[2],
     isHealthy: a[3],
-    allergens: a[4],          // will be JSON.stringified
-    ytQuery: a[5]
+    ytQuery: a[5] ?? null
   }));
 }
 
-function dId(d) {
-  return `${d.category}_${d.name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`.slice(0, 50);
+// Build a stable ID using the meal category (now in .category)
+function buildId(d) {
+  return `${d.category}_${slug(d.name)}`.slice(0, 50);
 }
 
 async function main() {
   console.log("Seeding Dish table…");
 
-  // Build base set
+  // Base set
   const base = [
     ...asDishes("main", MAIN),
     ...asDishes("veggie", VEGGIE),
     ...asDishes("soup", SOUP),
     ...asDishes("meat", MEAT),
-    ...asDishes("dessert", DESSERT)
+    ...asDishes("dessert", DESSERT),
+    ...asBreakfastDishes(BREAKFAST)
   ];
 
-  // Add variants to reach ~85 rows
-  const extras = [];
+  // Variants to ~95 rows
   const variants = ["(Spicy)", "(Low-carb)", "(Gluten-free)"];
+  const CAP = 95;
+  const extras = [];
+
   for (const b of base) {
     for (const v of variants) {
-      if (extras.length + base.length >= 85) break;
+      if (base.length + extras.length >= CAP) break;
+      const isGF = v.includes("Gluten-free");
       extras.push({
         ...b,
+        id: "",
         name: `${b.name} ${v}`,
         tags: [...b.tags, v.replace(/[()]/g, "").toLowerCase()],
-        isHealthy: b.isHealthy || v.includes("Low-carb") || v.includes("Gluten-free"),
-        allergens: v.includes("Gluten-free") ? b.allergens.filter((x) => x !== "gluten") : b.allergens
+        isHealthy: b.isHealthy || v.includes("Low-carb") || isGF,
+        allergens: isGF ? (b.allergens ?? []).filter((x) => x !== "gluten") : (b.allergens ?? [])
       });
     }
-    if (extras.length + base.length >= 85) break;
+    if (base.length + extras.length >= CAP) break;
   }
 
-  const final = [...base, ...extras].slice(0, 85);
+  const final = [...base, ...extras].slice(0, CAP).map((d) => ({ ...d, id: buildId(d) }));
 
-  // Upsert rows (tags/allergens as JSON strings)
+  // Upsert with CSV fields
   let n = 0;
   for (const d of final) {
     await prisma.dish.upsert({
-      where: { id: dId(d) },
+      where: { id: d.id },
       update: {
         name: d.name,
-        category: d.category,
-        tags: JSON.stringify(d.tags ?? []),
-        allergens: JSON.stringify(d.allergens ?? []),
+        category: d.category,                     // meal category
+        tags: (d.tags ?? []).join(","),           // CSV
+        allergens: (d.allergens ?? []).join(","), // CSV
         costBand: d.costBand,
         timeBand: d.timeBand,
         isHealthy: d.isHealthy,
-        ytQuery: d.ytQuery ?? null
+        ytQuery: d.ytQuery
       },
       create: {
-        id: dId(d),
+        id: d.id,
         name: d.name,
         category: d.category,
-        tags: JSON.stringify(d.tags ?? []),
-        allergens: JSON.stringify(d.allergens ?? []),
+        tags: (d.tags ?? []).join(","),           // CSV
+        allergens: (d.allergens ?? []).join(","), // CSV
         costBand: d.costBand,
         timeBand: d.timeBand,
         isHealthy: d.isHealthy,
-        ytQuery: d.ytQuery ?? null
+        ytQuery: d.ytQuery
       }
     });
     n++;

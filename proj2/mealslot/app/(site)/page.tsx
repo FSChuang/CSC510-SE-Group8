@@ -57,28 +57,41 @@ function HomePage() {
     return () => (t ? clearInterval(t) : undefined);
   }, [cooldownMs]);
 
-  const onSpin = async (locked: { index: number; dishId: string }[]) => {
-    setBusy(true);
-    // send categories as an array for backwards compatibility, containing the single selection
+  const onSpin = async (locked: { index: number; dishId: string }[] = []) => {
+  // num must be 1..6
+  const num = Math.min(6, Math.max(1, Number(dishCount) || 1));
+
+  setBusy(true);
+  try {
     const res = await fetch("/api/spin", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ category, tags: selectedTags, allergens: selectedAllergens, locked, powerups, dishCount })
+      body: JSON.stringify({
+        category,                     // "breakfast" | "lunch" | "dinner" | "dessert"
+        num,                          // number of reels to spin
+        tags: selectedTags,           // string[]
+        allergens: selectedAllergens, // string[]
+        locked,                       // [{ index, dishId }] or []
+        powerups,                     // optional object { healthy?, cheap?, max30m? }
+      }),
     });
-    setBusy(false);
+
     if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
+      const j = await res.json().catch(() => ({} as any));
       alert(`Spin failed: ${j.message ?? res.status}`);
       return;
     }
-    const data = await res.json();
 
+    const data = await res.json();
     setSelection(data.selection);
     setRecipes(null);
     setVenues(null);
     setOpenRecipeModal(false);
     setCooldownMs(3000);
-  };
+  } finally {
+    setBusy(false);
+  }
+};
 
   const fetchRecipes = async () => {
     if (!selection.length) return;

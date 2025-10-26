@@ -27,20 +27,20 @@ model Category {
 }
 
 model Dish {
-  id        String   @id
-  name      String
-  category  String
-  tags      String
-  allergens String
-  costBand  Int
-  timeBand  Int
-  isHealthy Boolean  @default(false)
-  ytQuery   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id
+  name        String
+  category    String
+  tags        String    @default("")  // CSV
+  allergens   String    @default("")  // CSV
+  costBand    Int
+  timeBand    Int
+  isHealthy   Boolean  @default(false)
+  ytQuery     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // add this line so Favorite.dish has an opposite side
-  favorites Favorite[]
+  // NEW: back-reference for favorites
+  favorites   Favorite[] @relation("DishFavorites")
 }
 
 model Spin {
@@ -76,9 +76,10 @@ model PartyMember {
 
 model Favorite {
   id     String @id @default(cuid())
+
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
   dishId String
-  dish   Dish   @relation(fields: [dishId], references: [id])
+  dish   Dish   @relation("DishFavorites", fields: [dishId], references: [id])
 }
