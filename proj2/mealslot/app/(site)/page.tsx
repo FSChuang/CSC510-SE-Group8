@@ -23,8 +23,11 @@ type Venue = {
   distance_km: number;
 };
 
+type MealCategory = "breakfast" | "lunch" | "dinner" | "dessert";
+
 function HomePage() {
-  const [category, setCategory] = useState<string>("Breakfast");
+  // Use lowercase values that the API expects
+  const [category, setCategory] = useState<MealCategory>("breakfast");
   const [dishCount, setDishCount] = useState(0);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedAllergens, setSelectedAllergens] = useState<string[]>([]);
@@ -58,40 +61,75 @@ function HomePage() {
   }, [cooldownMs]);
 
   const onSpin = async (locked: { index: number; dishId: string }[] = []) => {
-  // num must be 1..6
-  const num = Math.min(6, Math.max(1, Number(dishCount) || 1));
+    // enforce 1..6
+    const num = Math.min(6, Math.max(1, Number(dishCount) || 1));
+    const lockedIds = locked.map((l) => l.dishId);
 
-  setBusy(true);
-  try {
-    const res = await fetch("/api/spin", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        category,                     // "breakfast" | "lunch" | "dinner" | "dessert"
-        num,                          // number of reels to spin
-        tags: selectedTags,           // string[]
-        allergens: selectedAllergens, // string[]
-        locked,                       // [{ index, dishId }] or []
-        powerups,                     // optional object { healthy?, cheap?, max30m? }
-      }),
-    });
+    setBusy(true);
+    try {
+      const res = await fetch("/api/spin", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          category,              // "breakfast" | "lunch" | "dinner" | "dessert"
+          num,
+          tags: selectedTags,
+          allergens: selectedAllergens,
+          locked: lockedIds,     // API expects string[]
+          powerups: { noDuplicates: true },
+        }),
+      });
 
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({} as any));
-      alert(`Spin failed: ${j.message ?? res.status}`);
-      return;
+      const payload = await res.json().catch(() => ({} as any));
+
+      if (!res.ok) {
+        const msg =
+          payload?.error?.message ??
+          payload?.message ??
+          `${res.status} ${res.statusText}`;
+        alert(`Spin failed: ${msg}`);
+        return;
+      }
+
+      // ---- Map API -> UI Dish type ----
+      type ApiDishDTO = {
+        id: string;
+        name: string;
+        mealCategory: MealCategory;
+        tags?: string[];
+        allergens?: string[];
+        costBand?: number;
+        timeBand?: number;
+        isHealthy?: boolean;
+        ytQuery?: string | null;
+      };
+
+      const items = (payload.items ?? []) as ApiDishDTO[];
+
+      const uiDishes: Dish[] = items.map((d): Dish => ({
+        id: d.id,
+        name: d.name,
+        // bridge backend mealCategory -> UI Dish['category'] (legacy union)
+        category: d.mealCategory as unknown as Dish["category"],
+        tags: d.tags ?? [],
+        allergens: d.allergens ?? [],
+        costBand: d.costBand ?? 2,
+        timeBand: d.timeBand ?? 2,
+        isHealthy: !!d.isHealthy,
+        ytQuery: d.ytQuery ?? "",
+      }));
+
+      setSelection(uiDishes);
+      setRecipes(null);
+      setVenues(null);
+      setOpenRecipeModal(false);
+      setCooldownMs(3000);
+    } catch (e: any) {
+      alert(`Spin failed: ${e?.message ?? e}`);
+    } finally {
+      setBusy(false);
     }
-
-    const data = await res.json();
-    setSelection(data.selection);
-    setRecipes(null);
-    setVenues(null);
-    setOpenRecipeModal(false);
-    setCooldownMs(3000);
-  } finally {
-    setBusy(false);
-  }
-};
+  };
 
   const fetchRecipes = async () => {
     if (!selection.length) return;
@@ -122,16 +160,16 @@ function HomePage() {
         <h2 className="mb-2 text-lg font-semibold">Choose Category</h2>
         <div className="flex flex-wrap gap-2">
           {["Breakfast", "Lunch", "Dinner", "Dessert"].map((c) => {
-            const active = category === c.toLowerCase();
+            const value = c.toLowerCase() as MealCategory;
+            const active = category === value;
             return (
               <button
-                key={c.toLowerCase()}
+                key={value}
                 className={cn(
                   "rounded-full border px-3 py-1 text-sm",
                   active ? "bg-neutral-900 text-white" : "bg-white"
                 )}
-                // clicking a different option selects it; clicking the active option will deselect (set to "")
-                onClick={() => setCategory((prev) => (prev === c.toLowerCase() ? "" : c.toLowerCase()))}
+                onClick={() => setCategory(value)}
                 aria-pressed={active}
               >
                 {c}
@@ -222,5 +260,4 @@ function HomePage() {
   );
 }
 
-// Client-only page to avoid hydration noise from extensions/timers.
 export default dynamic(() => Promise.resolve(HomePage), { ssr: false });

@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   }
 
   const where: Prisma.DishWhereInput =
-    parsed.data.category ? { category: parsed.data.category } : {};
+    parsed.data.category ? { mealCategory: parsed.data.category } : {};
 
   const rows = await prisma.dish.findMany({
     where,
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     data: {
       id,
       name: data.name,
-      category: data.category,
+      mealCategory: data.category,
       tags: data.tags.join(","),          // stored as CSV in SQLite
       allergens: data.allergens.join(","),// stored as CSV in SQLite
       costBand: data.costBand,

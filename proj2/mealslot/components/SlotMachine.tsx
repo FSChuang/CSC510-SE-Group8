@@ -71,14 +71,17 @@ export function SlotMachine({ reelCount, onSpin, cooldownMs, busy, selection }: 
         </div>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {Array.from({ length: reelCount }, (_, i) => (
-          <SlotReel
-            key={i}
-            dish={dishesByIndex[i]}
-            locked={!!locked[i]}
-            onToggle={() => toggleLock(i)}
-          />
-        ))}
+        {Array.from({ length: reelCount }, (_, i) => {
+          const d = dishesByIndex[i];
+          return (
+            <SlotReel
+              key={`reel-${i}-${d?.id ?? "empty"}`} // more stable keys
+              dish={d}
+              locked={!!locked[i]}
+              onToggle={() => toggleLock(i)}
+            />
+          );
+        })}
       </div>
 
       <div className="mt-4">

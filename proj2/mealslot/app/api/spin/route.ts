@@ -1,176 +1,126 @@
-import "server-only";
-export const runtime = "nodejs";
+import { NextRequest, NextResponse } from "next/server";
+import {
+  getCandidatesByCategory,
+  filterByTagsAllergens,
+  pickRandom,
+  type MealCategory,
+  type DishDTO,
+} from "@/lib/dishes";
 
-import { NextRequest } from "next/server";
-import { z } from "zod";
-import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
-import { Dish, PowerUpsInput } from "@/lib/schemas";
-import { weightedSpin } from "@/lib/scoring";
+/** -------- lightweight validation helpers (no new deps) -------- */
+const isMealCategory = (s: any): s is MealCategory =>
+  s === "breakfast" || s === "lunch" || s === "dinner" || s === "dessert";
 
-// ---------- request body ----------
-const Body = z.object({
-  category: z.enum(["breakfast", "lunch", "dinner", "dessert"]),
-  num: z.number().int().min(1).max(6),
-  tags: z.array(z.string()).default([]),
-  allergens: z.array(z.string()).default([]),
-  locked: z
-    .array(
-      z.object({
-        index: z.number().int().min(0).max(5),
-        dishId: z.string(),
-      })
-    )
-    .optional()
-    .default([]),
-  powerups: z
-    .object({
-      healthy: z.boolean().optional(),
-      cheap: z.boolean().optional(),
-      max30m: z.boolean().optional(),
-    })
-    .optional()
-    .default({}),
-});
+const toStringArray = (v: unknown): string[] =>
+  Array.isArray(v) ? v.map((x) => String(x)).filter(Boolean) : [];
 
-// map meal period -> existing DB categories
-function mapMealToDbCats(meal: string): string[] {
-  if (meal === "dessert") return ["dessert"];
-  return ["main", "veggie", "soup", "meat"]; // breakfast/lunch/dinner share savory sets
-}
+const toLockedArray = (v: unknown): string[] =>
+  Array.isArray(v) ? v.map((x) => String(x)).filter(Boolean) : [];
 
-function csvToArray(csv: string | null | undefined): string[] {
-  if (!csv) return [];
-  return csv
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
+const toNumberInRange = (v: unknown, min: number, max: number, def: number): number => {
+  const n = Number(v);
+  if (!Number.isInteger(n)) return def;
+  return Math.min(Math.max(n, min), max);
+};
 
-// Build Prisma where for tags/allergens against CSV strings (SQLite: case-sensitive)
-// We lower incoming filters to match the seeded lowercase CSV.
-function buildWhere(
-  meal: "breakfast" | "lunch" | "dinner" | "dessert",
-  tags: string[],
-  allergens: string[]
-): Prisma.DishWhereInput {
-  const cats = mapMealToDbCats(meal);
-  const orCats = cats.map((c) => ({ category: c }));
+const toBool = (v: unknown, def: boolean) =>
+  typeof v === "boolean" ? v : def;
 
-  const andClauses: Prisma.DishWhereInput[] = [];
+/** -------- strict guardrails for breakfast / dessert -------- */
+const BFAST_SIGNS = [
+  "breakfast","pancake","waffle","omelet","omelette","egg","eggs","scramble","frittata",
+  "cereal","granola","oatmeal","porridge","bagel","toast","hashbrown","hash brown",
+  "bacon","sausage","muffin","french toast","overnight oats","avocado toast",
+  "breakfast burrito","breakfast sandwich","chilaquiles","shakshuka","crepe",
+  "smoothie bowl","yogurt parfait"
+];
 
-  // include tags: require that CSV string contains each selected tag (lowercase)
-  for (const tRaw of tags) {
-    const t = tRaw.toLowerCase();
-    andClauses.push({ tags: { contains: t } });
-  }
+const DESSERT_SIGNS = [
+  "dessert","sweet","ice cream","ice-cream","gelato","sorbet","cake","brownie","cookie",
+  "tart","pie","cheesecake","pudding","custard","cupcake","macaron","chocolate",
+  "banoffee","tiramisu","panna cotta","crème brûlée","donut","doughnut"
+];
 
-  // exclude allergens: NOT contains any of the selected allergens (lowercase)
-  if (allergens.length) {
-    andClauses.push({
-      NOT: allergens.map((aRaw) => ({
-        allergens: { contains: aRaw.toLowerCase() },
-      })),
+const hasAny = (text: string, words: string[]) => words.some((w) => text.includes(w));
+
+function strictCategoryFilter(items: DishDTO[], category: MealCategory): DishDTO[] {
+  if (category === "breakfast" || category === "dessert") {
+    const SIGNS = category === "breakfast" ? BFAST_SIGNS : DESSERT_SIGNS;
+    return items.filter((d) => {
+      const text = `${d.name} ${(d.tags ?? []).join(" ")}`.toLowerCase();
+      return d.mealCategory === category || hasAny(text, SIGNS);
     });
   }
-
-  const where: Prisma.DishWhereInput = {
-    OR: orCats,
-    ...(andClauses.length ? { AND: andClauses } : {}),
-  };
-
-  return where;
+  return items; // lunch/dinner are broad
 }
 
-function rowToDish(row: {
-  id: string;
-  name: string;
-  category: string;
-  tags: string | null;
-  allergens: string | null;
-  costBand: number;
-  timeBand: number;
-  isHealthy: boolean;
-  ytQuery: string | null;
-}): Dish {
-  return {
-    id: row.id,
-    name: row.name,
-    category: row.category,
-    tags: csvToArray(row.tags),
-    costBand: row.costBand,
-    timeBand: row.timeBand,
-    isHealthy: row.isHealthy,
-    allergens: csvToArray(row.allergens),
-    ytQuery: row.ytQuery ?? undefined,
-  };
-}
-
+/** -------------------- Route -------------------- */
 export async function POST(req: NextRequest) {
   try {
-    const json = await req.json().catch(() => ({}));
-    const parsed = Body.safeParse(json);
-    if (!parsed.success) {
-      return Response.json({ issues: parsed.error.issues }, { status: 400 });
-    }
+    const body = await req.json();
 
-    const {
-      category,
-      num,
-      tags: rawTags,
-      allergens: rawAllergens,
-      locked,
-      powerups,
-    } = parsed.data;
-
-    // normalize filters to lowercase to match CSV in DB
-    const tags = rawTags.map((t) => t.toLowerCase());
-    const allergens = rawAllergens.map((a) => a.toLowerCase());
-
-    const where = buildWhere(category, tags, allergens);
-
-    const rows = await prisma.dish.findMany({
-      where,
-      orderBy: [{ name: "asc" }],
-      take: 250,
-      select: {
-        id: true,
-        name: true,
-        category: true,
-        tags: true,
-        allergens: true,
-        costBand: true,
-        timeBand: true,
-        isHealthy: true,
-        ytQuery: true,
-      },
-    });
-
-    const options: Dish[] = rows.map(rowToDish);
-
-    if (options.length === 0) {
-      return Response.json(
-        {
-          code: "NO_OPTIONS",
-          message:
-            "No dishes match the current category/filters. Try removing some tags/allergens.",
-        },
+    const category = body?.category;
+    if (!isMealCategory(category)) {
+      return NextResponse.json(
+        { ok: false, error: { code: "BAD_REQUEST", message: "category must be breakfast | lunch | dinner | dessert" } },
         { status: 400 }
       );
     }
 
-    // Create N identical reels from the same filtered option list
-    const reels: Dish[][] = Array.from({ length: num }, () => options);
+    const num = toNumberInRange(body?.num, 1, 20, 3);
+    const tags = toStringArray(body?.tags).map((s) => s.toLowerCase());
+    const allergens = toStringArray(body?.allergens).map((s) => s.toLowerCase());
+    const locked = toLockedArray(body?.locked);
+    const noDuplicates = toBool(body?.powerups?.noDuplicates, true);
 
-    // Spin with existing scoring
-    const selection = weightedSpin(reels, locked, (powerups ?? {}) as PowerUpsInput);
+    const candidates = await getCandidatesByCategory(category);
+    const filtered = filterByTagsAllergens(candidates, { tags, allergens });
+    const guarded = strictCategoryFilter(filtered, category);
 
-    return Response.json({ reels, selection });
-  } catch (err) {
-    console.error("spin route error:", err);
-    return Response.json(
-      { code: "INTERNAL_ERROR", message: (err as Error)?.message ?? "unknown" },
+    const lockedSet = new Set(locked);
+    const lockedDishes = guarded.filter((d) => lockedSet.has(d.id));
+
+    const remainderIds = new Set(lockedDishes.map((d) => d.id));
+    const pool = guarded.filter((d) => !remainderIds.has(d.id));
+
+    const need = Math.max(0, num - lockedDishes.length);
+    if (need > 0 && pool.length === 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: {
+            code: "NO_CANDIDATES",
+            message: `No ${category} dishes matched your filters.`,
+            debug: {
+              category,
+              requested: num,
+              afterCategory: candidates.length,
+              afterFilters: filtered.length,
+              afterGuard: guarded.length,
+              lockedInResults: lockedDishes.length,
+            },
+          },
+        },
+        { status: 404 }
+      );
+    }
+
+    const picks = pickRandom(pool, need, noDuplicates);
+    const items = [...lockedDishes, ...picks];
+
+    return NextResponse.json({ ok: true, items }, { status: 200 });
+  } catch (err: any) {
+    return NextResponse.json(
+      { ok: false, error: { code: "SERVER_ERROR", message: "Unexpected error", detail: String(err?.message ?? err) } },
       { status: 500 }
     );
   }
+}
+
+// Optional: friendly GET so opening the route in a browser doesn't look broken
+export async function GET() {
+  return NextResponse.json(
+    { ok: false, error: { code: "METHOD_NOT_ALLOWED", message: "Use POST /api/spin" } },
+    { status: 405 }
+  );
 }

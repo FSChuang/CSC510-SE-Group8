@@ -8,39 +8,46 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// -------------------------
+// Models
+// -------------------------
 model User {
-  id          String       @id @default(cuid())
-  email       String       @unique
+  id          String        @id @default(cuid())
+  email       String        @unique
   name        String
-  provider    String       @default("mock")
-  createdAt   DateTime     @default(now())
+  provider    String        @default("mock")
+  createdAt   DateTime      @default(now())
   favorites   Favorite[]
   spins       Spin[]
   PartyMember PartyMember[]
 }
 
-model Category {
-  id   String @id        // e.g. "main", "veggie"
-  name String @unique
-  tags String
-  // IMPORTANT: no dishes[] field here — keeps Dish.category scalar
-}
+// NOTE: Legacy Category model removed.
 
+// Dish is the canonical source for spins/favorites.
+// We store mealCategory as STRING ("breakfast" | "lunch" | "dinner" | "dessert").
+// We’ll enforce validity in code and via seed/recategorizer scripts.
 model Dish {
-  id          String   @id
-  name        String
-  category    String
-  tags        String    @default("")  // CSV
-  allergens   String    @default("")  // CSV
-  costBand    Int
-  timeBand    Int
-  isHealthy   Boolean  @default(false)
-  ytQuery     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String  @id @default(cuid())
+  name         String
+  mealCategory String // "breakfast" | "lunch" | "dinner" | "dessert"
+  description  String? // <— add this line
 
-  // NEW: back-reference for favorites
-  favorites   Favorite[] @relation("DishFavorites")
+  tags      String  @default("")
+  allergens String  @default("")
+  costBand  Int
+  timeBand  Int
+  isHealthy Boolean @default(false)
+  ytQuery   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  favorites Favorite[] @relation("DishFavorites")
+
+  category String? @ignore
+
+  @@index([mealCategory])
 }
 
 model Spin {
@@ -55,27 +62,27 @@ model Spin {
 }
 
 model Party {
-  id              String       @id @default(cuid())
-  code            String       @unique
+  id              String        @id @default(cuid())
+  code            String        @unique
   hostId          String?
-  isActive        Boolean      @default(true)
+  isActive        Boolean       @default(true)
   constraintsJson String
-  createdAt       DateTime     @default(now())
+  createdAt       DateTime      @default(now())
   members         PartyMember[]
 }
 
 model PartyMember {
-  id       String   @id @default(cuid())
-  partyId  String
-  party    Party    @relation(fields: [partyId], references: [id])
-  userId   String?
-  user     User?    @relation(fields: [userId], references: [id])
+  id        String   @id @default(cuid())
+  partyId   String
+  party     Party    @relation(fields: [partyId], references: [id])
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
   prefsJson String
-  joinedAt DateTime @default(now())
+  joinedAt  DateTime @default(now())
 }
 
 model Favorite {
-  id     String @id @default(cuid())
+  id String @id @default(cuid())
 
   userId String
   user   User   @relation(fields: [userId], references: [id])

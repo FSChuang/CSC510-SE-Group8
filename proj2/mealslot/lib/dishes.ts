@@ -1,108 +1,90 @@
-// server-only catalog access (DB-first)
-// tags/allergens are stored as CSV strings in SQLite.
+// lib/dishes.ts
+import { prisma } from "./db";
+import { parseCsvToArray, includesAny } from "./csv";
 
-import { prisma } from "@/lib/db";
-import type { Prisma } from "@prisma/client";
-import type { Dish } from "@/lib/schemas";
+// Keep types local to this file (you can export if needed elsewhere)
+export type MealCategory = "breakfast" | "lunch" | "dinner" | "dessert";
 
-/* ----------------------------- CSV Helpers ----------------------------- */
-
-const csvToArray = (s?: string | null): string[] =>
-  s ? s.split(",").map((t) => t.trim()).filter(Boolean) : [];
-
-const arrayToCsv = (arr?: string[]): string =>
-  arr && arr.length ? arr.join(",") : "";
-
-/* --------------------------- Row → Dish mapper -------------------------- */
-
-function rowToDish(row: {
+export type DishDTO = {
   id: string;
   name: string;
-  category: string;
-  tags: string | null;
-  allergens: string | null;
+  mealCategory: MealCategory;
+  tags: string[];
+  allergens: string[];
   costBand: number;
   timeBand: number;
   isHealthy: boolean;
-  ytQuery: string | null;
-}): Dish {
-  // Your Dish type requires ytQuery, so always provide a string
-  return {
-    id: row.id,
-    name: row.name,
-    category: row.category,
-    tags: csvToArray(row.tags),
-    costBand: row.costBand,
-    timeBand: row.timeBand,
-    isHealthy: row.isHealthy,
-    allergens: csvToArray(row.allergens),
-    ytQuery: row.ytQuery ?? "", // <— important: always a string
-  };
-}
+  ytQuery?: string | null;
+  // If you later add `description` to schema, uncomment next line and map it below.
+  // description?: string | null;
+};
 
-/* ----------------------------- Filter builder --------------------------- */
+export type SpinRequest = {
+  category: MealCategory;
+  num?: number;            // default 1
+  tags?: string[];         // include-any
+  allergens?: string[];    // exclude-any
+  locked?: string[];       // pre-selected dish ids to keep
+  powerups?: { noDuplicates?: boolean }; // default true
+};
 
-function buildWhere(
-  category?: string,
-  tagFilters?: string[],
-  allergenFilters?: string[]
-): Prisma.DishWhereInput {
-  const AND: Prisma.DishWhereInput[] = [];
-
-  if (category) {
-    AND.push({ category });
-  }
-
-  // NOTE: Your generated Prisma types don’t allow `mode` on StringFilter<"Dish">.
-  // So we drop it to avoid TS errors (case-sensitive match).
-  if (tagFilters && tagFilters.length) {
-    for (const t of tagFilters) {
-      AND.push({ tags: { contains: t } });
-    }
-  }
-
-  if (allergenFilters && allergenFilters.length) {
-    for (const a of allergenFilters) {
-      AND.push({ allergens: { contains: a } });
-    }
-  }
-
-  return AND.length ? { AND } : {};
-}
-
-/* ------------------------------- Queries -------------------------------- */
-
-export async function listDishesDbFirst(
-  category?: string,
-  tags: string[] = [],
-  allergens: string[] = []
-): Promise<Dish[]> {
-  const where = buildWhere(category, tags, allergens);
-
+/** Fetch dishes for a given mealCategory and map CSV -> arrays */
+export async function getCandidatesByCategory(cat: MealCategory): Promise<DishDTO[]> {
   const rows = await prisma.dish.findMany({
-    where,
-    orderBy: [{ name: "asc" }],
-    take: 500,
+    where: { mealCategory: cat },
+    orderBy: { name: "asc" },
   });
 
-  return rows.map(rowToDish);
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    mealCategory: (r.mealCategory as MealCategory) ?? "lunch",
+    tags: parseCsvToArray(r.tags),
+    allergens: parseCsvToArray(r.allergens),
+    costBand: r.costBand,
+    timeBand: r.timeBand,
+    isHealthy: r.isHealthy,
+    ytQuery: r.ytQuery ?? null,
+    // description: (r as any).description ?? null,
+  }));
 }
 
-export async function dishesByCategoryDbFirst(
-  category: string,
-  tags: string[] = [],
-  allergens: string[] = []
-): Promise<Dish[]> {
-  return listDishesDbFirst(category, tags, allergens);
+/** Include-any for tags; exclude-any for allergens */
+export function filterByTagsAllergens(
+  dishes: DishDTO[],
+  opts: { tags?: string[]; allergens?: string[] }
+): DishDTO[] {
+  const wantedTags = (opts.tags ?? []).map((t) => t.toLowerCase());
+  const banned = (opts.allergens ?? []).map((a) => a.toLowerCase());
+
+  return dishes
+    .filter((d) => wantedTags.length === 0 || includesAny(d.tags, wantedTags))
+    .filter((d) => banned.length === 0 || !includesAny(d.allergens, banned));
 }
 
-/* --------------------- Legacy sync fallback (no-op) --------------------- */
+export function pickRandom<T>(arr: T[], k: number, noDup = true): T[] {
+  if (!arr.length || k <= 0) return [];
 
-export function dishesByCategory(_category: string): Dish[] {
-  // Legacy sync API kept to avoid breaking old imports.
-  return [];
+  // sample with replacement
+  if (!noDup) {
+    const out: T[] = [];
+    for (let i = 0; i < k; i++) {
+      const idx = Math.floor(Math.random() * arr.length);
+      out.push(arr[idx]!); // non-null assertion: idx is in-bounds
+    }
+    return out;
+  }
+
+  // Fisher–Yates, then slice (no destructuring; asserts for strict indexing)
+  const a: T[] = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = a[i]!;   // assert: i is in-bounds
+    a[i] = a[j]!;
+    a[j] = tmp;
+  }
+  const n = Math.min(k, a.length);
+  return a.slice(0, n);
 }
 
-export async function allDishesDbFirst(): Promise<Dish[]> {
-  return listDishesDbFirst();
-}
+
