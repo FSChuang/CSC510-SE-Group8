@@ -97,11 +97,25 @@ function HomePage() {
     const r = await fetch("/api/places", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ cuisines, locationHint: "Your City" })
+      body: JSON.stringify({ cuisines, locationHint: "Raleigh" })
     });
     const j = await r.json();
-    setVenues(j.venues);
+    console.log("API response:", j);
+
+    // Normalize: prefer j.venues if present, otherwise flatten j.results (object keyed by dish)
+    let normalized: any[] = [];
+    if (Array.isArray(j.venues)) {
+      normalized = j.venues;
+    } else if (j.results && typeof j.results === "object") {
+      normalized = Object.values(j.results).flat();
+    } else if (Array.isArray(j)) {
+      normalized = j;
+    }
+
+    console.log("Normalized venues:", normalized);
+    setVenues(normalized);
   };
+
 
   return (
     <div className="space-y-4">
