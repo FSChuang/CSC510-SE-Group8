@@ -55,7 +55,7 @@ async function geocodeCity(city: string) {
   return { lat: loc.lat, lng: loc.lng };
 }
 
-async function placesTextSearch(query: string, pageSize = 3) {
+async function placesTextSearch(query: string, pageSize = 2) {
   if (!GOOGLE_KEY) return { results: [], error: "missing_key" };
   // Text Search
   const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
   const jobs = cuisines.map(async (dish) => {
     const query = `${dish} restaurant in ${city}`;
     try {
-      const { results, error } = await placesTextSearch(query, 3);
+      const { results, error } = await placesTextSearch(query, 2);
       if (error) {
         responseObj.errors.push({ cuisine: dish, message: String(error) });
         responseObj.results[dish] = [];
