@@ -11,7 +11,7 @@ const GOOGLE_KEY = process.env.MAPS_API_KEY;
 if (!GOOGLE_KEY) {
   // During development it's useful to fail fast if key missing
   // In production you might want to handle this more gracefully.
-  console.warn("Missing GOOGLE_MAPS_API_KEY environment variable");
+  console.warn("Missing MAPS_API_KEY environment variable");
 }
 
 function toPriceStr(price_level: number | undefined | null) {
@@ -133,7 +133,10 @@ export async function POST(req: NextRequest) {
           price,
           url,
           cuisine: dish,
-          distance_km
+          distance_km,
+          // include coordinates in the returned object
+          lat,
+          lng
         };
       });
 
@@ -157,7 +160,10 @@ export async function POST(req: NextRequest) {
       price: "$".repeat(1 + (i % 3)),
       url: "https://example.com",
       cuisine: c,
-      distance_km: Number((1.0 + i * 0.7).toFixed(1))
+      distance_km: Number((1.0 + i * 0.7).toFixed(1)),
+      // provide a reasonable stubbed coord if we have origin, otherwise undefined
+      lat: origin ? origin.lat + i * 0.001 : undefined,
+      lng: origin ? origin.lng + i * 0.001 : undefined
     }));
     return Response.json({
       results: cuisines.reduce((acc: any, c: string) => ((acc[c] = venues), acc), {}),

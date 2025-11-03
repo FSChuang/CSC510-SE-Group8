@@ -10,7 +10,7 @@ import { Dish, PowerUpsInput, RecipeJSON } from "@/lib/schemas";
 import { cn } from "@/components/ui/cn";
 import Modal from "@/components/ui/Modal";
 import RecipePanel from "@/components/RecipePanel";
-import MapStub from "@/components/MapStub";
+import MapWithPins from "@/components/MapWithPins";
 
 type Venue = {
   id: string;
@@ -211,7 +211,7 @@ function HomePage() {
               ))}
             </div>
             <div className="mt-3">
-              <MapStub venues={venues} />
+              <MapWithPins venues={venues} />
             </div>
           </>
         )}
