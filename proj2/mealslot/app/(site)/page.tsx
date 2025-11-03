@@ -10,7 +10,7 @@ import { Dish, PowerUpsInput, RecipeJSON } from "@/lib/schemas";
 import { cn } from "@/components/ui/cn";
 import Modal from "@/components/ui/Modal";
 import RecipePanel from "@/components/RecipePanel";
-import MapStub from "@/components/MapStub";
+import MapWithPins from "@/components/MapWithPins";
 
 type Venue = {
   id: string;
@@ -38,15 +38,11 @@ function HomePage() {
   const [openRecipeModal, setOpenRecipeModal] = useState(false);
 
   const cuisines = useMemo(() => {
-    const tagish = new Set<string>();
-    selection.forEach((d) => {
-      d.tags.forEach((t) => tagish.add(t));
-      if (d.category === "meat") tagish.add("bbq");
-      if (d.category === "veggie") tagish.add("salad");
-      if (d.category === "soup") tagish.add("soup");
-    });
-    const arr = Array.from(tagish);
-    return arr.length ? arr : ["american", "asian", "italian"];
+    // Extract the "name" property from each selected item
+    const names = selection.map((d) => d.name).filter(Boolean);
+
+    // Fallback list if nothing is selected
+    return names.length ? names : ["american", "asian", "italian"];
   }, [selection]);
 
   useEffect(() => {
@@ -94,14 +90,29 @@ function HomePage() {
   };
 
   const fetchVenues = async () => {
+    console.log(cuisines)
     const r = await fetch("/api/places", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ cuisines, locationHint: "Your City" })
+      body: JSON.stringify({ cuisines, locationHint: "Raleigh" })
     });
     const j = await r.json();
-    setVenues(j.venues);
+    console.log("API response:", j);
+
+    // Normalize: prefer j.venues if present, otherwise flatten j.results (object keyed by dish)
+    let normalized: any[] = [];
+    if (Array.isArray(j.venues)) {
+      normalized = j.venues;
+    } else if (j.results && typeof j.results === "object") {
+      normalized = Object.values(j.results).flat();
+    } else if (Array.isArray(j)) {
+      normalized = j;
+    }
+
+    console.log("Normalized venues:", normalized);
+    setVenues(normalized);
   };
+
 
   return (
     <div className="space-y-4">
@@ -200,7 +211,7 @@ function HomePage() {
               ))}
             </div>
             <div className="mt-3">
-              <MapStub venues={venues} />
+              <MapWithPins venues={venues} />
             </div>
           </>
         )}
