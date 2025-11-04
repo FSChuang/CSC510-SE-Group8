@@ -43,27 +43,64 @@ export function PartyClient({ code: initialCode = "" }: { code?: string }) {
   const [nickname, setNickname] = useState<string>("Guest");
   const [prefs, setPrefs] = useState<z.infer<typeof PrefsSchema>>({});
   const [lastSpin, setLastSpin] = useState<any[] | null>(null);
+  const [partyMembers, setPartyMembers] = useState<any[]>([]);
+  const [memberPrefs, setMemberPrefs] = useState<Record<string, any>>({});
+
 
   // WebSocket live updates (optional)
+  const sockRef = useRef<any | null>(null);
   useEffect(() => {
     const url = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:4001";
-    let sock: any;
     let mounted = true;
     import("socket.io-client")
       .then(({ io }) => {
-        sock = io(url, { transports: ["websocket"] });
-        sock.on("connect", () => {});
-        sock.on("spin", (payload: any) => {
+        const sock = io(url, { transports: ["websocket"] });
+        sockRef.current = sock;
+
+        sock.on("connect", () => {
+          // connected
+        });
+
+        // listen for server broadcast when a party spin happens
+        sock.on("spin_result", (payload: any) => {
           if (!mounted) return;
+          // server sends: { code, selection }
           if (payload?.code === code) setLastSpin(payload.selection);
+        });
+
+        sock.on("party_state", (payload: any) => {
+          if (payload?.code === code) {
+            setPartyMembers(payload.members || []);
+          }
+        });
+
+        sock.on("prefs_update", (payload: any) => {
+          if (payload?.code === code) {
+            setMemberPrefs((prev) => ({
+              ...prev,
+              [payload.memberId]: payload.prefs,
+            }));
+          }
+        });
+
+        // optional acknowledgement from ws server when join succeeds
+        sock.on("joined", (payload: any) => {
+          // payload: { code }
         });
       })
       .catch(() => {});
+
     return () => {
       mounted = false;
-      if (sock) sock.close();
+      if (sockRef.current) {
+        try {
+          sockRef.current.close();
+        } catch {}
+      }
+      sockRef.current = null;
     };
   }, [code]);
+
 
   const canCreate = code.length === 0;
   const canJoin = code.length === 6;
@@ -85,13 +122,26 @@ export function PartyClient({ code: initialCode = "" }: { code?: string }) {
       body: JSON.stringify({ nickname })
     });
     const j = await r.json();
+    // if (r.ok) {
+    //   setCode(j.code);
+    //   setMemberId(j.memberId);
+    //   fetchState(j.code);
+    // } else {
+    //   alert("Create failed");
+    // }
     if (r.ok) {
       setCode(j.code);
       setMemberId(j.memberId);
       fetchState(j.code);
-    } else {
+      // join WS room so we receive live updates
+      try {
+        sockRef.current?.emit?.("join", j.code);
+      } catch {}
+    } 
+    else {
       alert("Create failed");
     }
+
   };
 
   const onJoin = async () => {
@@ -112,6 +162,7 @@ export function PartyClient({ code: initialCode = "" }: { code?: string }) {
   const pushPrefs = async (next: Partial<z.infer<typeof PrefsSchema>>) => {
     const merged = { ...prefs, ...next };
     setPrefs(merged);
+    sockRef.current?.emit?.("update_prefs", { code: state?.party?.code, memberId, prefs: merged });
     if (!state || !memberId) return;
     await fetch("/api/party/update", {
       method: "POST",
@@ -267,6 +318,26 @@ export function PartyClient({ code: initialCode = "" }: { code?: string }) {
                 </>
               )}
             </div>
+
+            <div className="mt-4 rounded-2xl border p-3">
+              <div className="mb-2 text-sm font-semibold">Live Party Overview</div>
+              {partyMembers.length === 0 ? (
+                <div className="text-xs text-neutral-500">No members yet.</div>
+              ) : (
+                <ul className="space-y-1 text-xs">
+                  {partyMembers.map((m) => (
+                    <li key={m.id} className="border-b pb-1">
+                      <span className="font-medium">{m.nickname ?? m.id.slice(0, 6)}</span>
+                      {" — "}
+                      {memberPrefs[m.id]
+                        ? JSON.stringify(memberPrefs[m.id])
+                        : "no preferences yet"}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
           </>
         ) : (
           <div className="text-sm text-neutral-600">Create a party or join with a 6-char code.</div>
