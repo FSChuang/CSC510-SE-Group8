@@ -11,6 +11,7 @@ import { cn } from "@/components/ui/cn";
 import Modal from "@/components/ui/Modal";
 import RecipePanel from "@/components/RecipePanel";
 import MapWithPins from "@/components/MapWithPins";
+import VideoPanel, {Video} from "@/components/VideoPanel";
 
 type Venue = {
   id: string;
@@ -36,6 +37,9 @@ function HomePage() {
   const [recipes, setRecipes] = useState<RecipeJSON[] | null>(null);
   const [venues, setVenues] = useState<Venue[] | null>(null);
   const [openRecipeModal, setOpenRecipeModal] = useState(false);
+  const [videosByDish, setVideosByDish] = useState<Record<string, Video[]>>({});
+  const [openVideoModal, setOpenVideoModal] = useState(false);
+
 
   const cuisines = useMemo(() => {
     // Extract the "name" property from each selected item
@@ -72,25 +76,33 @@ function HomePage() {
     setSelection(data.selection);
     setRecipes(null);
     setVenues(null);
-    setOpenRecipeModal(false);
+    setOpenVideoModal(false);
     setCooldownMs(3000);
+
+    await fetchVideos(data.selection);
   };
 
-  const fetchRecipes = async () => {
-    if (!selection.length) return;
-    const ids = selection.map((d) => d.id);
-    const r = await fetch("/api/recipe", {
+  const fetchVideos = async (dishes: Dish[]) => {
+    if (!dishes.length) return;
+
+    const dishNames = dishes.map(d => d.name);
+
+    const res = await fetch("/api/videos", {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ dishIds: ids })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dishes: dishNames }),
     });
-    const j = await r.json();
-    setRecipes(j.recipes);
-    setOpenRecipeModal(true);
+
+    const data = await res.json();
+    if (res.ok) {
+      setVideosByDish(data.results);
+    } else {
+      console.error("Failed to fetch videos", data);
+    }
   };
+
 
   const fetchVenues = async () => {
-    console.log(cuisines)
     const r = await fetch("/api/places", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -168,7 +180,7 @@ function HomePage() {
             ))}
           </ul>
           <div className="mt-4 flex gap-2">
-            <button className="underline" onClick={fetchRecipes}>
+            <button className="underline" onClick={() => setOpenVideoModal(true)}>
               Cook at Home
             </button>
             <button className="underline" onClick={fetchVenues}>
@@ -179,11 +191,11 @@ function HomePage() {
       )}
 
       <Modal
-        open={openRecipeModal && !!recipes}
+        open={openVideoModal && !!videosByDish}
         title="Cook at Home — Recipes"
-        onClose={() => setOpenRecipeModal(false)}
+        onClose={() => setOpenVideoModal(false)}
       >
-        {recipes ? <RecipePanel recipes={recipes} /> : <div className="text-sm">Loading…</div>}
+        <VideoPanel videosByDish={videosByDish} />
       </Modal>
 
       <section id="outside" className="rounded-2xl border bg-white p-4 shadow-sm">
