@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 type Venue = {
   id: string;
@@ -19,6 +19,21 @@ declare global {
 export default function MapWithPins({ venues }: { venues: Venue[] }) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    // Ask for user location once
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        (err) => {
+          console.warn("User denied geolocation or error:", err);
+        }
+      );
+    }
+  }, []);
 
   useEffect(() => {
     if (!apiKey) {
@@ -26,7 +41,6 @@ export default function MapWithPins({ venues }: { venues: Venue[] }) {
       return;
     }
 
-    // If SDK already loaded, initialize immediately
     const run = () => {
       if (!mapRef.current || !window.google) return;
 
@@ -34,18 +48,38 @@ export default function MapWithPins({ venues }: { venues: Venue[] }) {
         .filter((v) => typeof v.lat === "number" && typeof v.lng === "number")
         .map((v) => ({ lat: v.lat as number, lng: v.lng as number }));
 
-      // If we have coords use them, otherwise center to fallback
-      const center = coords.length
+      // Center map on user location if available, else first venue, else fallback
+      const center = userLocation
+        ? userLocation
+        : coords.length
         ? coords[0]
-        : { lat: 35.7796, lng: -78.6382 }; // fallback center (Raleigh)
+        : { lat: 35.7796, lng: -78.6382 }; // fallback (Raleigh)
 
       const map = new window.google.maps.Map(mapRef.current, {
         center,
-        zoom: coords.length ? 13 : 11,
+        zoom: userLocation ? 12 : coords.length ? 13 : 11,
       });
 
-      // Add markers
       const bounds = new window.google.maps.LatLngBounds();
+
+      // Add user location marker
+      if (userLocation) {
+        new window.google.maps.Marker({
+          position: userLocation,
+          map,
+          title: "You are here",
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: "#4285F4",
+            fillOpacity: 1,
+            strokeWeight: 2,
+          },
+        });
+        bounds.extend(userLocation);
+      }
+
+      // Add venue markers
       venues.forEach((v) => {
         if (typeof v.lat === "number" && typeof v.lng === "number") {
           const pos = { lat: v.lat as number, lng: v.lng as number };
@@ -55,7 +89,6 @@ export default function MapWithPins({ venues }: { venues: Venue[] }) {
             title: v.name,
           });
 
-          // Optional: info window on click
           const infowindow = new window.google.maps.InfoWindow({
             content: `<div style="min-width:150px"><strong>${v.name}</strong>${
               v.url ? `<div><a href="${v.url}" target="_blank">Website</a></div>` : ""
@@ -67,8 +100,7 @@ export default function MapWithPins({ venues }: { venues: Venue[] }) {
         }
       });
 
-      // Fit bounds if we added markers
-      if (!bounds.isEmpty) map.fitBounds(bounds, 64);
+      if (!bounds.isEmpty()) map.fitBounds(bounds, 64);
     };
 
     if (window.google && window.google.maps) {
@@ -76,7 +108,6 @@ export default function MapWithPins({ venues }: { venues: Venue[] }) {
       return;
     }
 
-    // Insert script if not already present
     if (!document.querySelector(`#google-maps-${apiKey}`)) {
       const script = document.createElement("script");
       script.id = `google-maps-${apiKey}`;
@@ -86,7 +117,6 @@ export default function MapWithPins({ venues }: { venues: Venue[] }) {
       script.onload = run;
       document.head.appendChild(script);
     } else {
-      // script exists but maybe not loaded yet
       const checkLoaded = setInterval(() => {
         if (window.google && window.google.maps) {
           clearInterval(checkLoaded);
@@ -95,9 +125,7 @@ export default function MapWithPins({ venues }: { venues: Venue[] }) {
       }, 100);
       return () => clearInterval(checkLoaded);
     }
-
-    // re-run when venues change (clean is not strictly required here)
-  }, [venues, apiKey]);
+  }, [venues, apiKey, userLocation]);
 
   return <div ref={mapRef} style={{ width: "100%", height: 360, borderRadius: 12 }} />;
 }
