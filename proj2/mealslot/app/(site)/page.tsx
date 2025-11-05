@@ -102,16 +102,25 @@ function HomePage() {
   };
 
 
-  const fetchVenues = async () => {
+  const fetchVenues = async (coords?: { lat: number; lng: number }) => {
+    const body: any = { cuisines };
+    if (coords) {
+      body.lat = coords.lat;
+      body.lng = coords.lng;
+    } else {
+      body.locationHint = "Denver"; // fallback city
+    }
+
     const r = await fetch("/api/places", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ cuisines, locationHint: "Raleigh" })
+      body: JSON.stringify(body),
     });
+
     const j = await r.json();
     console.log("API response:", j);
 
-    // Normalize: prefer j.venues if present, otherwise flatten j.results (object keyed by dish)
+    // Normalize results
     let normalized: any[] = [];
     if (Array.isArray(j.venues)) {
       normalized = j.venues;
@@ -183,7 +192,27 @@ function HomePage() {
             <button className="underline" onClick={() => setOpenVideoModal(true)}>
               Cook at Home
             </button>
-            <button className="underline" onClick={fetchVenues}>
+            <button
+              className="underline"
+              onClick={() => {
+                if ("geolocation" in navigator) {
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      fetchVenues({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                    },
+                    (err) => {
+                      console.warn("Geolocation error or denied:", err);
+                      // fallback if denied
+                      fetchVenues();
+                    },
+                    { maximumAge: 1000 * 60 * 5, timeout: 10000 }
+                  );
+                } else {
+                  console.warn("Geolocation not supported");
+                  fetchVenues();
+                }
+              }}
+            >
               Eat Outside
             </button>
           </div>
