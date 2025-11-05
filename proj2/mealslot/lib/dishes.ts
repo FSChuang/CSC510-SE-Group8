@@ -56,52 +56,42 @@ const STATIC_BY_CAT: Record<string, UIDish[]> = /* build exactly like you had */
 
 // ---- DB-first, fallback to static ----
 export async function dishesByCategoryDbFirst(
-	category: string,
-	tags: string[] = [],
-	allergens: string[] = []
+  category: string,
+  tags: string[] = [],
+  allergens: string[] = []
 ): Promise<UIDish[]> {
-	const where: Prisma.DishWhereInput = { category };
-	const rows = await prisma.dish.findMany({
-		where,
-		orderBy: [{ name: "asc" }]
-	});
-
-	if (rows.length === 0) {
-		return (STATIC_BY_CAT[category] ?? []).slice();
-	}
-
-	const parse = (v: any) => {
-		if (!v && v !== "") return [];
-		try {
-			const arr = JSON.parse(v);
-			return Array.isArray(arr) ? arr.map(String) : [];
-		} catch {
-			return String(v).split(",").map(s => s.trim()).filter(Boolean);
-		}
-	};
-
-  const filtered = rows.filter(r => {
-    const rTags = parseArrayField(r.tags);
-    const rAllergens = parseArrayField(r.allergens);
-    console.log("Row Allergens")
-    console.log(rAllergens)
-    console.log("Selected Allergens")
-    console.log(allergens)
-    return tags.every(t => rTags.includes(t.toLowerCase())) &&
-          allergens.every(a => rAllergens.includes(a.toLowerCase()));
-  });
-
-	return filtered.map(toUIDish);
-}
-
-
-export async function listDishesDbFirst(category?: string): Promise<UIDish[]> {
-  const where: Prisma.DishWhereInput = category ? { category } : {};
+  const where: Prisma.DishWhereInput = { category };
   const rows = await prisma.dish.findMany({
     where,
-    orderBy: [{ name: "asc" }]
+    orderBy: [{ name: "asc" }],
   });
-  if (rows.length > 0) return rows.map(toUIDish);
-  // fallback to static (all)
-  return Object.values(STATIC_BY_CAT).flat();
+
+  if (rows.length === 0) {
+    return (STATIC_BY_CAT[category] ?? []).slice();
+  }
+
+  const norm = (s: string) => s.trim().toLowerCase();
+
+  const selectedTags = tags.map(norm);
+  const excludedAllergens = allergens.map(norm);
+
+  const filtered = rows.filter((r) => {
+    const rTags = parseArrayField(r.tags);           // normalized lowercase array
+    const rAllergens = parseArrayField(r.allergens); // normalized lowercase array
+
+    // TAGS: keep dish only if it contains ALL selected tags (unchanged)
+    const tagsOk =
+      selectedTags.length === 0 ||
+      selectedTags.every((t) => rTags.includes(t));
+
+    // ALLERGENS: EXCLUDE dish if it contains ANY selected allergen (reversed logic)
+    const allergensOk =
+      excludedAllergens.length === 0 ||
+      rAllergens.every((a) => !excludedAllergens.includes(a));
+
+    return tagsOk && allergensOk;
+  });
+
+  // convert to UI shape
+  return filtered.map(toUIDish);
 }
