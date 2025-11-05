@@ -4,9 +4,9 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 // canonical categories (plain strings in schema)
-const CATEGORIES = ["main", "veggie", "soup", "meat", "dessert"];
+const CATEGORIES = ["breakfast", "lunch", "dinner", "dessert"];
 
-const MAIN = [
+const BREAKFAST = [
   ["Margherita Pizza", 2, 2, false, ["gluten", "dairy"], "margherita pizza"],
   ["Grilled Chicken Bowl", 2, 2, true, [], "grilled chicken bowl"],
   ["Tofu Stir Fry", 1, 1, true, ["soy"], "tofu stir fry"],
@@ -23,7 +23,7 @@ const MAIN = [
   ["Steak & Potatoes", 3, 2, false, [], "steak potatoes"]
 ];
 
-const VEGGIE = [
+const LUNCH = [
   ["Caesar Salad", 1, 1, true, ["dairy"], "caesar salad"],
   ["Greek Salad", 1, 1, true, ["dairy"], "greek salad"],
   ["Quinoa Bowl", 1, 1, true, [], "quinoa bowl"],
@@ -36,7 +36,7 @@ const VEGGIE = [
   ["Hummus Plate", 1, 1, true, ["sesame"], "hummus plate"]
 ];
 
-const SOUP = [
+const DINNER = [
   ["Tomato Soup", 1, 1, true, [], "tomato soup"],
   ["Chicken Noodle Soup", 1, 2, true, ["gluten"], "chicken noodle soup"],
   ["Miso Soup", 1, 1, true, ["soy"], "miso soup"],
@@ -47,19 +47,6 @@ const SOUP = [
   ["Clam Chowder", 2, 2, false, ["shellfish", "dairy"], "clam chowder"],
   ["Hot & Sour", 1, 1, true, ["soy"], "hot sour soup"],
   ["Corn Chowder", 1, 2, false, ["dairy"], "corn chowder"]
-];
-
-const MEAT = [
-  ["Beef Bulgogi", 2, 2, false, ["soy"], "beef bulgogi"],
-  ["BBQ Ribs", 3, 3, false, [], "bbq ribs"],
-  ["Chicken Satay", 2, 2, true, ["peanut"], "chicken satay"],
-  ["Pork Schnitzel", 2, 2, false, ["gluten", "egg"], "pork schnitzel"],
-  ["Lamb Chops", 3, 2, false, [], "lamb chops"],
-  ["Teriyaki Chicken", 2, 2, false, ["soy"], "teriyaki chicken"],
-  ["Turkey Meatballs", 1, 2, true, ["egg"], "turkey meatballs"],
-  ["Beef Stir Fry", 1, 1, false, ["soy"], "beef stir fry"],
-  ["Roast Chicken", 2, 3, true, [], "roast chicken"],
-  ["Fish & Chips", 2, 2, false, ["gluten", "fish"], "fish and chips"]
 ];
 
 const DESSERT = [
@@ -97,10 +84,9 @@ async function main() {
 
   // Build base set
   const base = [
-    ...asDishes("main", MAIN),
-    ...asDishes("veggie", VEGGIE),
-    ...asDishes("soup", SOUP),
-    ...asDishes("meat", MEAT),
+    ...asDishes("breakfast", BREAKFAST),
+    ...asDishes("lunch", LUNCH),
+    ...asDishes("dinner", DINNER),
     ...asDishes("dessert", DESSERT)
   ];
 
