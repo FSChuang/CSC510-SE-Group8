@@ -72,12 +72,63 @@ export async function POST(req: NextRequest) {
       return [];
     }) as Array<{ index: number; dishId: string }>;
 
-    const reels: Dish[][] = [];
-    const count = dishCount ?? 1;
-    for (let i = 0; i < count; i++) {
-      const dishes = await dishesByCategoryDbFirst(category, tags, allergens);
-      reels.push(dishes);
-    }
+    // Build unique reels (no duplicates across boxes; variants treated as same "base")
+const all = await dishesByCategoryDbFirst(category, tags, allergens);
+
+// helper to normalize a "base" key (strip common variant suffixes if any ever appear again)
+const baseKey = (name: string) =>
+  name.toLowerCase().replace(/\s*\((spicy|low-carb|gluten-free)\)\s*$/i, "").trim();
+
+// 1) Exclude any locked dishes from the shared pool so they don't show up elsewhere
+const lockedSet = new Set(lockedInput.map((l) => l.dishId));
+const unlockedPool = all.filter((d) => !lockedSet.has(d.id));
+
+// 2) Dedupe by base (keep first occurrence of each base)
+const seenBase = new Set<string>();
+const deduped = unlockedPool.filter((d) => {
+  const k = `${d.category}:${baseKey(d.name)}`;
+  if (seenBase.has(k)) return false;
+  seenBase.add(k);
+  return true;
+});
+
+// 3) Shuffle the deduped pool (Fisher–Yates)
+for (let i = deduped.length - 1; i > 0; i--) {
+  const j = Math.floor(Math.random() * (i + 1));
+  [deduped[i], deduped[j]] = [deduped[j], deduped[i]];
+}
+
+const count = dishCount ?? 1;
+const reels: Dish[][] = Array.from({ length: count }, () => []);
+
+// 4) Deal round-robin so reels are disjoint
+let rr = 0;
+for (const d of deduped) {
+  reels[rr].push(d);
+  rr = (rr + 1) % count;
+}
+
+// 5) Ensure each locked dish is only in its own reel (and at the front)
+//    Also apply base-level de-dupe against other reels
+for (const { index, dishId } of lockedInput) {
+  const dish = all.find((x) => x.id === dishId);
+  if (!dish) continue;
+
+  const key = `${dish.category}:${baseKey(dish.name)}`;
+
+  // remove same-base dishes from all reels
+  for (let r = 0; r < reels.length; r++) {
+    reels[r] = reels[r].filter((x) => `${x.category}:${baseKey(x.name)}` !== key);
+  }
+  // put the locked one at the front of its designated reel
+  reels[index] = [dish, ...reels[index]];
+}
+
+
+    // NOTE: If pool.length < count, some reels may end up small. In that edge case
+    // weightedSpin will still work, but you can't guarantee uniqueness with fewer
+    // available dishes than slots. That’s expected behavior.
+
 
     const selection = weightedSpin(reels, lockedInput, powerups);
 
