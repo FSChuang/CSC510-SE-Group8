@@ -23,9 +23,15 @@ importers:
       cors:
         specifier: 2.8.5
         version: 2.8.5
+      lucide-react:
+        specifier: ^0.552.0
+        version: 0.552.0(react@18.3.1)
       next:
         specifier: 15.0.3
         version: 15.0.3(@babel/core@7.28.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      next-themes:
+        specifier: ^0.4.6
+        version: 0.4.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       postcss:
         specifier: 8.4.47
         version: 8.4.47
@@ -2349,6 +2355,12 @@ packages:
 
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
+
+  next-themes@0.4.6:
+    resolution: {integrity: sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA==}
+    peerDependencies:
+      react: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
+      react-dom: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
 
   next@15.0.3:
     resolution: {integrity: sha512-ontCbCRKJUIoivAdGB34yCaOcPgYXr9AAkV/IwqFfWWTXEPUgLYkSkqBhIk9KK7gGmgjc64B+RdoeIDM13Irnw==}
@@ -5443,6 +5455,11 @@ snapshots:
   napi-postinstall@0.3.4: {}
 
   natural-compare@1.4.0: {}
+
+  next-themes@0.4.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+    dependencies:
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
 
   next@15.0.3(@babel/core@7.28.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:

@@ -13,6 +13,7 @@ import RecipePanel from "@/components/RecipePanel";
 import MapWithPins from "@/components/MapWithPins";
 import VideoPanel, {Video} from "@/components/VideoPanel";
 
+
 type Venue = {
   id: string;
   name: string;

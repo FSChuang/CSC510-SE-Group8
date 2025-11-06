@@ -1,8 +1,121 @@
+/* --- path: app/globals.css --- */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:focus-visible {
-  outline: 2px solid #111;
-  outline-offset: 2px;
+/* Light & dark tokens on <html> via next-themes */
+:root {
+  --bg: 255 255 255;  /* white */
+  --fg: 17 24 39;     /* slate-900-ish */
+  --card: 255 255 255;
+  --card-border: 229 231 235; /* neutral-200 */
 }
+
+.dark {
+  --bg: 10 10 10;       /* deep neutral */
+  --fg: 243 244 246;    /* slate-100-ish */
+  --card: 23 23 23;     /* neutral-900 */
+  --card-border: 38 38 38; /* neutral-800 */
+}
+
+html, body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--fg));
+}
+
+/* Handy utility classes for your cards/sections */
+.card {
+  @apply rounded-2xl border p-6;
+  background-color: rgb(var(--card));
+  border-color: rgb(var(--card-border));
+}
+/* ==== DARK-MODE RESCUE SHIM (quick global fix) ==== */
+@layer base {
+  /* Any panel still using bg-white becomes a dark surface */
+  .dark .bg-white { background-color: rgb(23 23 23) !important; }        /* neutral-900 */
+  .dark .border-neutral-200, 
+  .dark .border-gray-200 { border-color: rgb(38 38 38) !important; }     /* neutral-800 */
+
+  /* Text utilities that force black become light in dark mode */
+  .dark .text-black { color: rgb(243 244 246) !important; }              /* slate-100 */
+  .dark .text-gray-700, .dark .text-neutral-700 { color: rgb(229 231 235) !important; }
+  .dark .text-gray-500, .dark .text-neutral-500 { color: rgb(212 212 212) !important; }
+
+  /* Inputs / selects / textareas */
+  .dark input, 
+  .dark select, 
+  .dark textarea {
+    background-color: rgb(38 38 38) !important;   /* neutral-800 */
+    color: rgb(243 244 246) !important;
+    border-color: rgb(64 64 64) !important;       /* neutral-700 */
+  }
+  .dark input:disabled, .dark select:disabled, .dark textarea:disabled {
+    background-color: rgb(64 64 64) !important;   /* neutral-700 */
+    color: rgb(212 212 212) !important;
+  }
+  .dark ::placeholder { color: rgb(163 163 163) !important; }
+
+  /* Details/summary accordions (your Filters sections) */
+  .dark details > summary { color: rgb(229 231 235) !important; }
+
+  /* Buttons that inherit text color will stay readable */
+  .dark button { color: inherit; }
+}
+/* ==== DARK MODE VISIBILITY FIXES ==== */
+@layer base {
+  /* Any surfaces left as white now become dark surfaces */
+  .dark .bg-white { background-color: rgb(23 23 23) !important; }
+  .dark .border-neutral-200, .dark .border-gray-200 { border-color: rgb(38 38 38) !important; }
+
+  /* Selected pills that used bg-black become orange in dark to keep contrast */
+  .dark .bg-black { background-color: rgb(249 115 22) !important; }           /* orange-500 */
+  .dark .hover\:bg-black:hover { background-color: rgb(234 88 12) !important; } /* orange-600 */
+  .dark .border-black { border-color: rgb(251 146 60) !important; }           /* orange-400 */
+
+  /* Generic chip/badge readability */
+  .dark .text-gray-700, .dark .text-neutral-700 { color: rgb(229 231 235) !important; }
+  .dark .text-gray-500, .dark .text-neutral-500 { color: rgb(212 212 212) !important; }
+
+  /* Inputs */
+  .dark input, .dark select, .dark textarea {
+    background-color: rgb(38 38 38) !important;  /* neutral-800 */
+    color: rgb(243 244 246) !important;
+    border-color: rgb(64 64 64) !important;
+  }
+  .dark ::placeholder { color: rgb(163 163 163) !important; }
+}
+@layer components {
+  .pill {
+    @apply rounded-full border px-3 py-1 text-sm transition;
+  }
+  .pill[data-selected="true"] {
+    @apply bg-black text-white dark:bg-orange-500 dark:text-black dark:border-orange-400;
+  }
+}
+/* ==== DARK MODE BUTTON VISIBILITY ==== */
+@layer base {
+  /* generic buttons */
+  .dark button {
+    background-color: rgb(38 38 38);   /* neutral-800 */
+    color: rgb(243 244 246);           /* slate-100 */
+    border: 1px solid rgb(64 64 64);   /* neutral-700 */
+  }
+  .dark button:hover:not(:disabled) {
+    background-color: rgb(64 64 64);   /* neutral-700 */
+  }
+
+  /* disabled state should still be legible */
+  .dark button:disabled {
+    background-color: rgb(64 64 64) !important;  /* neutral-700 */
+    color: rgb(212 212 212) !important;          /* neutral-300 */
+    opacity: 1 !important;                       /* override low-opacity libs */
+    cursor: not-allowed;
+  }
+
+  /* if the button uses utility colors, keep them readable */
+  .dark .bg-gray-100 { background-color: rgb(64 64 64) !important; }
+  .dark .text-gray-400 { color: rgb(212 212 212) !important; }
+  .dark .ring-gray-200 { --tw-ring-color: rgb(64 64 64) !important; }
+}
+
+

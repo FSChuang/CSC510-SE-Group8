@@ -1,16 +1,14 @@
+// --- path: app/(site)/layout.tsx ---
 import type { ReactNode } from "react";
+import SiteNav from "@/components/SiteNav";
 
 export default function SiteLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto max-w-6xl p-4">
-      <header className="flex items-center justify-between py-4">
-        <h1 className="text-xl font-bold">🥗 MealSlot</h1>
-        <div className="space-x-2">
-          <a href="/" className="underline">Home</a>
-          <a href="/party" className="underline">Party Mode</a>
-        </div>
+    <div className="min-h-screen bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+      <header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/80">
+        <SiteNav />
       </header>
-      <main>{children}</main>
+      <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
     </div>
   );
 }
