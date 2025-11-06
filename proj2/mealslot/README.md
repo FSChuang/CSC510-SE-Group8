@@ -1,5 +1,6 @@
 ![Run Vitest](https://github.com/FSChuang/CSC510-SE-Group8/actions/workflows/test.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Release](https://img.shields.io/github/v/release/FSChuang/CSC510-SE-Group8)
 
 
 # MealSlot — MVP Scaffolding
@@ -149,3 +150,11 @@ Tailwind configured in `tailwind.config.ts`.
 Seed data in `prisma/seed.ts`; extra dev data via `scripts/devdata.ts`.
 
 API routes live under `app/api/**` and are fully typed.
+
+## Support
+
+For issues, questions, or feature requests, please open a GitHub issue.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
