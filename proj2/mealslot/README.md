@@ -1,4 +1,6 @@
 ![Run Vitest](https://github.com/FSChuang/CSC510-SE-Group8/actions/workflows/test.yml/badge.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 
 # MealSlot — MVP Scaffolding
 
