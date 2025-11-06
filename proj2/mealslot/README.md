@@ -151,6 +151,13 @@ Seed data in `prisma/seed.ts`; extra dev data via `scripts/devdata.ts`.
 
 API routes live under `app/api/**` and are fully typed.
 
+## Roadmap
+
+- Enhance UI with animations
+- Allow for more complex meal plans spanning multiple categories
+- Add a login system so users can save meal plans
+- Create a system for users to share dishes and plans with others
+
 ## Support
 
 For issues, questions, or feature requests, please open a GitHub issue.
