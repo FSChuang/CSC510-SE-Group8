@@ -1,66 +1,62 @@
-// --- path: lib/realtime.ts ---
+// Lightweight client-side realtime using either BroadcastChannel (same-origin tabs)
+// or WebSocket when NEXT_PUBLIC_WS_URL is set. All events are namespaced per room code.
+
 type Handler = (payload: any) => void;
 
-export type RT = {
-  emit: (event: string, payload?: any) => void;
-  on: (event: string, h: Handler) => void;
-  off: (event: string, h: Handler) => void;
-  close: () => void;
-};
-
-/** Socket.IO if wsUrl provided; otherwise BroadcastChannel scoped to `room`. */
-export async function getRealtimeForRoom(room: string, wsUrl?: string): Promise<RT> {
-  const roomCode = (room || "").toUpperCase();
-
-  if (wsUrl) {
-    const { io } = await import("socket.io-client");
-    const sock = io(wsUrl, { transports: ["websocket"], autoConnect: true });
-    sock.emit("join", { room: roomCode });
-
-    return {
-      emit: (e, p) => sock.emit(e, p),
-      on: (e, h) => sock.on(e, h),
-      off: (e, h) => sock.off(e, h),
-      close: () => { try { sock.close(); } catch {} },
+class BCWire {
+  kind = "bc" as const;
+  private ch: BroadcastChannel;
+  private handlers = new Map<string, Set<Handler>>();
+  constructor(room: string) {
+    this.ch = new BroadcastChannel(`party:${room}`);
+    this.ch.onmessage = (ev) => {
+      const { type, payload } = ev.data || {};
+      const set = this.handlers.get(type);
+      if (!set) return;
+      for (const h of set) try { h(payload); } catch {}
     };
   }
+  on(type: string, fn: Handler) {
+    if (!this.handlers.has(type)) this.handlers.set(type, new Set());
+    this.handlers.get(type)!.add(fn);
+  }
+  emit(type: string, payload: any) { try { this.ch.postMessage({ type, payload }); } catch {} }
+  close() { try { this.ch.close(); } catch {} }
+}
 
-  // ---- BroadcastChannel fallback (room-scoped) ----
-  const name = `mealslot-party-${roomCode || "lobby"}`;
-  const ch = new BroadcastChannel(name);
-  const listeners = new Map<string, Set<Handler>>();
-  let isClosed = false;
+class WSWire {
+  kind = "ws" as const;
+  private ws: WebSocket;
+  private room: string;
+  private handlers = new Map<string, Set<Handler>>();
+  private openPromise: Promise<void>;
+  constructor(room: string, url: string) {
+    this.room = room;
+    this.ws = new WebSocket(url.replace(/^http/,"ws"));
+    this.ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (!msg || msg.room !== this.room) return;
+        const set = this.handlers.get(msg.type);
+        if (!set) return;
+        for (const h of set) try { h(msg.payload); } catch {}
+      } catch {}
+    };
+    this.openPromise = new Promise((res)=> this.ws.onopen = ()=>res());
+  }
+  async on(type: string, fn: Handler) {
+    if (!this.handlers.has(type)) this.handlers.set(type, new Set());
+    this.handlers.get(type)!.add(fn);
+  }
+  async emit(type: string, payload: any) {
+    await this.openPromise;
+    try { this.ws.send(JSON.stringify({ room: this.room, type, payload })); } catch {}
+  }
+  close() { try { this.ws.close(); } catch {} }
+}
 
-  const safePost = (event: string, payload?: any) => {
-    if (isClosed) return;
-    try {
-      ch.postMessage({ event, payload });
-    } catch {
-      // Channel might already be closed (fast unmount / room switch). Ignore.
-    }
-  };
-
-  ch.onmessage = (ev) => {
-    if (isClosed) return;
-    const { event, payload } = ev.data || {};
-    const set = listeners.get(event);
-    if (!set) return;
-    for (const h of set) {
-      try { h(payload); } catch { /* swallow listener errors */ }
-    }
-  };
-
-  return {
-    emit: safePost,
-    on: (e, h) => {
-      if (!listeners.has(e)) listeners.set(e, new Set());
-      listeners.get(e)!.add(h);
-    },
-    off: (e, h) => listeners.get(e)?.delete(h),
-    close: () => {
-      isClosed = true;
-      try { ch.close(); } catch {}
-      listeners.clear();
-    },
-  };
+export async function getRealtimeForRoom(room: string) {
+  const url = process.env.NEXT_PUBLIC_WS_URL || "";
+  if (!url) return new BCWire(room);
+  return new WSWire(room, url);
 }
