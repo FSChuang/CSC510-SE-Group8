@@ -1,45 +1,69 @@
 import "server-only";
 export const runtime = "nodejs";
 
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { partyCodeFromSeed, PrefsSchema } from "@/lib/party";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/db"; // ✅ your existing path
 
 const Body = z.object({
-  nickname: z.string().min(1).max(24).optional()
+  nickname: z.string().min(1).max(24).optional(),
 });
+
+function makeCode() {
+  // generate 6 uppercase letters/numbers
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+async function generateUniqueCode() {
+  for (let i = 0; i < 5; i++) {
+    const code = makeCode();
+    const exists = await prisma.party.findFirst({
+      where: { code, isActive: true },
+      select: { id: true },
+    });
+    if (!exists) return code;
+  }
+  throw new Error("Failed to generate unique code");
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const json = (await req.json().catch(() => ({}))) as unknown;
+    const json = await req.json().catch(() => ({}));
     const parsed = Body.safeParse(json);
-    if (!parsed.success) return Response.json({ issues: parsed.error.issues }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json({ issues: parsed.error.issues }, { status: 400 });
+    }
 
-    const code = partyCodeFromSeed(`${Date.now()}|${Math.random()}`);
+    const code = await generateUniqueCode();
+
+    // ✅ Create new party
     const party = await prisma.party.create({
       data: {
         code,
         isActive: true,
-        constraintsJson: JSON.stringify({})
-      }
+        constraintsJson: JSON.stringify({}),
+      },
+      select: { id: true, code: true },
     });
 
+    // ✅ Create first member (nickname column + prefsJson)
     const member = await prisma.partyMember.create({
       data: {
         partyId: party.id,
-        prefsJson: JSON.stringify({ nickname: parsed.data.nickname ?? "Host" })
-      }
+        nickname: parsed.data.nickname ?? "Guest",
+        prefsJson: JSON.stringify({}),
+      },
+      select: { id: true, nickname: true },
     });
 
-    return Response.json({
-      code,
+    return NextResponse.json({
       partyId: party.id,
       memberId: member.id,
-      host: true
+      code: party.code,
+      nickname: member.nickname,
     });
-  } catch (e) {
-    console.error("/api/party/create", e);
-    return Response.json({ code: "INTERNAL" }, { status: 500 });
+  } catch (e: any) {
+    console.error("/api/party/create error:", e?.message || e);
+    return NextResponse.json({ code: "INTERNAL" }, { status: 500 });
   }
 }
