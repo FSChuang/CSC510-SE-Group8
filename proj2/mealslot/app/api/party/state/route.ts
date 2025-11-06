@@ -1,35 +1,25 @@
 import "server-only";
 export const runtime = "nodejs";
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
 import { PartyStateSchema, PrefsSchema, ConstraintsSchema } from "@/lib/party";
 import { prisma } from "@/lib/db";
 
 const Query = z.object({
-  code: z.string().length(6),
+  code: z.string().length(6)
 });
 
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const parsed = Query.safeParse({ code: url.searchParams.get("code") ?? "" });
-    if (!parsed.success) {
-      return NextResponse.json({ issues: parsed.error.issues }, { status: 400 });
-    }
+    if (!parsed.success) return Response.json({ issues: parsed.error.issues }, { status: 400 });
 
-    const party = await prisma.party.findFirst({
-      where: { code: parsed.data.code },
-    });
-    if (!party) {
-      return NextResponse.json({ code: "NOT_FOUND" }, { status: 404 });
-    }
+    const party = await prisma.party.findFirst({ where: { code: parsed.data.code } });
+    if (!party) return Response.json({ code: "NOT_FOUND" }, { status: 404 });
 
-    // ✅ Fetch members including nickname directly
-    const members = await prisma.partyMember.findMany({
-      where: { partyId: party.id },
-      select: { id: true, nickname: true, prefsJson: true },
-    });
+    const members = await prisma.partyMember.findMany({ where: { partyId: party.id } });
 
     const resp = {
       party: {
@@ -38,29 +28,37 @@ export async function GET(req: NextRequest) {
         isActive: party.isActive,
         constraints: (() => {
           try {
-            return ConstraintsSchema.parse(JSON.parse(party.constraintsJson || "{}"));
+            return ConstraintsSchema.parse(JSON.parse(party.constraintsJson));
           } catch {
             return {};
           }
-        })(),
+        })()
       },
       members: members.map((m) => ({
         id: m.id,
-        nickname: m.nickname ?? "Guest", // ✅ use the real column
+        nickname: (() => {
+          try {
+            const p = JSON.parse(m.prefsJson);
+            return typeof p.nickname === "string" ? p.nickname : undefined;
+          } catch {
+            return undefined;
+          }
+        })(),
         prefs: (() => {
           try {
-            return PrefsSchema.parse(JSON.parse(m.prefsJson || "{}"));
+            return PrefsSchema.parse(JSON.parse(m.prefsJson));
           } catch {
             return {};
           }
-        })(),
-      })),
+        })()
+      }))
     };
 
+    // Validate before sending
     const validated = PartyStateSchema.parse(resp);
-    return NextResponse.json(validated);
+    return Response.json(validated);
   } catch (e) {
     console.error("/api/party/state", e);
-    return NextResponse.json({ code: "INTERNAL" }, { status: 500 });
+    return Response.json({ code: "INTERNAL" }, { status: 500 });
   }
 }

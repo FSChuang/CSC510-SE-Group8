@@ -59,7 +59,7 @@ model Party {
   code            String       @unique
   hostId          String?
   isActive        Boolean      @default(true)
-  constraintsJson String       @default("{}")
+  constraintsJson String
   createdAt       DateTime     @default(now())
   members         PartyMember[]
 }
@@ -70,11 +70,9 @@ model PartyMember {
   party    Party    @relation(fields: [partyId], references: [id])
   userId   String?
   user     User?    @relation(fields: [userId], references: [id])
-  nickname  String   @default("Guest") 
-  prefsJson String?
+  prefsJson String
   joinedAt DateTime @default(now())
 }
-
 
 model Favorite {
   id     String @id @default(cuid())
