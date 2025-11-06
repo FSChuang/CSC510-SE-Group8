@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react"
 import { useEffect, useState } from "react";
 import { cn } from "./ui/cn"; // assuming you have your cn helper
 
