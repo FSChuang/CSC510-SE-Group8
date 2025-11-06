@@ -4,9 +4,17 @@ import path from "path";
 export default defineConfig({
   test: {
     globals: true,
-    environment: "node",
-    include: ["tests/unit/**/*.test.ts"],
-    coverage: { enabled: false }
+    include: ["tests/unit/**/*.test.ts", "tests/components/**/*.test.tsx"],
+    coverage: { enabled: false },
+    setupFiles: "./tests/setupTests.ts",
+    environmentOptions: {
+      "**/unit/**": {
+        environment: "node",
+      },
+      "**/components/**": {
+        environment: "jsdom",
+      },
+    },
   },
   resolve: {
     alias: {
