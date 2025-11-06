@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/db"; // ✅ your existing path
+import { prisma } from "@/lib/db";
 
 const Body = z.object({
   nickname: z.string().min(1).max(24).optional(),

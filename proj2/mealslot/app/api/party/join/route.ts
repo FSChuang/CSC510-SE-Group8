@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/db"; // ✅ consistent import
+import { prisma } from "@/lib/db";
 
 const Body = z.object({
   code: z.string().length(6),
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     const members = await prisma.partyMember.findMany({
       where: { partyId: party.id },
-      select: { id: true, nickname: true },
+      select: { id: true, nickname: true, prefsJson: true },
     });
 
     return NextResponse.json({

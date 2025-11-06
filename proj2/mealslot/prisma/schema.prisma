@@ -71,7 +71,7 @@ model PartyMember {
   userId   String?
   user     User?    @relation(fields: [userId], references: [id])
   nickname  String   @default("Guest") 
-  prefsJson String
+  prefsJson String?
   joinedAt DateTime @default(now())
 }
 
