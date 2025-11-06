@@ -1,3 +1,8 @@
+![Run Vitest](https://github.com/FSChuang/CSC510-SE-Group8/actions/workflows/test.yml/badge.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Release](https://img.shields.io/github/v/release/FSChuang/CSC510-SE-Group8)
+
+
 # MealSlot — MVP Scaffolding
 
 Production-ready scaffolding with strict TypeScript, Next.js 15 App Router, Tailwind CSS, Prisma (SQLite by default), deterministic stubs (LLM + YouTube + Places), Socket.IO websockets, Zod validation, rate limiting, and tests.
@@ -19,6 +24,13 @@ MealSlot helps people decide what to eat using a slot-machine UI. Categories bec
 - **API:** Next.js Route Handlers
 - **Websockets:** Socket.IO (separate dev server)
 - **Tooling:** pnpm, ESLint, Prettier, Vitest, Playwright
+
+### Third-Party APIs
+
+MealSlot requires the following API keys for full functionality:
+- **Google Maps JavaScript API** — venue suggestions for “Eat Outside”  
+- **YouTube Data API v3** — recipe and cooking videos
+Remember to populate the keys in .env.local before running the app.
 
 ## Repository Layout
 
@@ -145,3 +157,18 @@ Tailwind configured in `tailwind.config.ts`.
 Seed data in `prisma/seed.ts`; extra dev data via `scripts/devdata.ts`.
 
 API routes live under `app/api/**` and are fully typed.
+
+## Roadmap
+
+- Enhance UI with animations
+- Allow for more complex meal plans spanning multiple categories
+- Add a login system so users can save meal plans
+- Create a system for users to share dishes and plans with others
+
+## Support
+
+For issues, questions, or feature requests, please open a GitHub issue.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
