@@ -25,6 +25,13 @@ MealSlot helps people decide what to eat using a slot-machine UI. Categories bec
 - **Websockets:** Socket.IO (separate dev server)
 - **Tooling:** pnpm, ESLint, Prettier, Vitest, Playwright
 
+### Third-Party APIs
+
+MealSlot requires the following API keys for full functionality:
+- **Google Maps JavaScript API** — venue suggestions for “Eat Outside”  
+- **YouTube Data API v3** — recipe and cooking videos
+Remember to populate the keys in .env.local before running the app.
+
 ## Repository Layout
 
 ```text
