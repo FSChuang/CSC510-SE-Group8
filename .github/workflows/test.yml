@@ -1,4 +1,4 @@
-name: Run Vitest
+name: Run Vitest (debug)
 
 on:
   push:
@@ -9,10 +9,19 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
+
+      - name: Show runner info
+        run: |
+          echo "== Git info =="
+          git --no-pager log -n 1 --pretty=full
+          echo "== Workdir listing =="
+          ls -la
+          echo "== Node & pnpm versions =="
+          node -v || true
+          pnpm -v || true
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -28,5 +37,26 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Run Vitest
-        run: pnpm vitest --run
+      - name: Show package.json scripts
+        run: cat package.json | jq '.scripts' || (echo "jq not available; printing file" && cat package.json)
+
+      - name: Run Vitest (verbose, single thread)
+        id: run_tests
+        run: |
+          # record output to a file so we can upload it even if the command fails
+          echo "== Running tests =="
+          pnpm vitest --run --reporter verbose --threads false 2>&1 | tee vitest-output.log
+          # capture exit code so we can still upload logs before failing the job
+          echo "::set-output name=exitcode::$(tail -n +1 vitest-output.log >/dev/null 2>&1; test ${PIPESTATUS[0]} -eq 0 && echo 0 || echo 1)"
+
+      - name: Upload test log
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-log
+          path: vitest-output.log
+
+      - name: Fail job if tests failed
+        if: steps.run_tests.outputs.exitcode == '1'
+        run: |
+          echo "Tests failed — see vitest-output.log artifact for full output"
+          exit 1
