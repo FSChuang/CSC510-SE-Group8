@@ -1,3 +1,5 @@
+![Run Vitest](https://github.com/FSChuang/CSC510-SE-Group8/actions/workflows/test.yml/badge.svg)
+
 # MealSlot — MVP Scaffolding
 
 Production-ready scaffolding with strict TypeScript, Next.js 15 App Router, Tailwind CSS, Prisma (SQLite by default), deterministic stubs (LLM + YouTube + Places), Socket.IO websockets, Zod validation, rate limiting, and tests.
