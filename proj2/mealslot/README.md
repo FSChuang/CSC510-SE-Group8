@@ -15,6 +15,10 @@ MealSlot helps people decide what to eat using a slot-machine UI. Categories bec
 - **Eat Outside** → venue suggestions (stubbed deterministically).
 - **Party Mode** → merges constraints across participants and broadcasts spins via websockets.
 
+## Demo
+
+[▶️ Watch the demo video](https://github.com/yourusername/yourrepo/blob/main/demo/demo.mp4)
+
 ## Tech Stack
 
 - **Framework:** Next.js 15 (App Router), React, TypeScript (strict)
