@@ -17,7 +17,7 @@ MealSlot helps people decide what to eat using a slot-machine UI. Categories bec
 
 ## Demo
 
-[▶️ Watch the demo video](https://github.com/yourusername/yourrepo/blob/main/demo/demo.mp4)
+[▶️ Watch the demo video](https://github.com/FSChuang/CSC510-SE-Group8/proj2/mealslot/assets/mealslot_demo.mp4)
 
 ## Tech Stack
 
