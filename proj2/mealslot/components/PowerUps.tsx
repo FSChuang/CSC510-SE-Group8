@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react"
 import { PowerUpsInput } from "@/lib/schemas";
 import { cn } from "./ui/cn";
 
