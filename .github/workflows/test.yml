@@ -14,7 +14,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: proj2/mealslot  # all run steps use this as cwd
+        working-directory: proj2/mealslot
 
     steps:
       - name: Checkout repository
@@ -34,5 +34,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Run Vitest tests
-        run: pnpm test
+      - name: Run Vitest with coverage
+        run: pnpm test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }} # not needed for public repos
+          fail_ci_if_error: true
