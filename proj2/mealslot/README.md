@@ -15,6 +15,10 @@ MealSlot helps people decide what to eat using a slot-machine UI. Categories bec
 - **Eat Outside** → venue suggestions (stubbed deterministically).
 - **Party Mode** → merges constraints across participants and broadcasts spins via websockets.
 
+## Who is MealSlot For?
+
+Mealslot is meant to help anyone looking to expand their culinary horizons. Whether they are an adventurous eater looking for new experiences, a beginner trying to expand their pallate, or a home cook working on their skills, MealSlot can help them discover and explore new dishes.
+
 ## Demo
 
 https://github.com/user-attachments/assets/79e14304-0232-4f44-b30f-979cc4b544a5
