@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If you use this software in a publication, please cite it using the metadata below."
+title: "mealslot"
+version: "0.1.0"
+doi: ""
+date-released: "2025-11-06"
+authors:
+  - given-names: "Chris"
+    family-names: "Lee"
+    affiliation: ""
+    email: ""
+    orcid: ""
+preferred-citation:
+  type: "software"
+  title: "mealslot"
+  authors:
+    - "Chris Lee"
+  version: "0.1.0"
+  date-released: "2025-11-06"
+  note: "Cite this software when using it for research or production."
+abstract: |
+  mealslot is a small utility for planning and scheduling meals, designed to
+  simplify weekly meal rotation, automate shopping list generation, and help
+  maintain dietary constraints. Lightweight and extensible.
+keywords:
+  - "meal planning"
+  - "scheduling"
+  - "food"
+  - "automation"
+  - "mealslot"
+license: "MIT"
+repository-code: ""
+url: ""
+references:
+  - type: "website"
+    title: ""
+    url: ""
