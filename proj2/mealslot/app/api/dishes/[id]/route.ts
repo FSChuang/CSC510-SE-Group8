@@ -16,10 +16,12 @@ const PatchIn = z.object({
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+
   try {
-    await prisma.dish.delete({ where: { id: params.id } });
+    await prisma.dish.delete({ where: { id } });
     return new Response(null, { status: 204 });
   } catch {
     return Response.json({ error: "Not found" }, { status: 404 });
@@ -28,17 +30,21 @@ export async function DELETE(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+
   const body = await req.json().catch(() => ({}));
   const parsed = PatchIn.safeParse(body);
-  if (!parsed.success) return Response.json({ issues: parsed.error.issues }, { status: 400 });
+  if (!parsed.success) {
+    return Response.json({ issues: parsed.error.issues }, { status: 400 });
+  }
 
   const d = parsed.data;
 
   try {
     const updated = await prisma.dish.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(d.name !== undefined ? { name: d.name } : {}),
         ...(d.category !== undefined ? { category: d.category } : {}),
@@ -50,6 +56,7 @@ export async function PATCH(
         ...(d.ytQuery !== undefined ? { ytQuery: d.ytQuery } : {}),
       },
     });
+
     return Response.json(updated);
   } catch {
     return Response.json({ error: "Not found" }, { status: 404 });

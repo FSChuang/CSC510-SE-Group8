@@ -46,7 +46,7 @@ export default function PlacesMapCard({ height = 260 }: { height?: number }) {
         await loadGoogleMaps();
         if (cancelled || !divRef.current || !(window as any).google?.maps) return;
 
-        const gm = (window as any).google.maps as typeof google.maps;
+        const gm = (window as any).google.maps;
         const fallback = { lat: 35.7704, lng: -78.674 }; // Raleigh fallback
         const map = new gm.Map(divRef.current, {
           center: fallback,

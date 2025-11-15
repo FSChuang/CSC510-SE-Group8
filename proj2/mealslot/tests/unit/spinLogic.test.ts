@@ -1,4 +1,4 @@
-import { weightedSpin } from "@/lib/scoring";
+import { weightedSpin } from "../../lib/scoring";
 import { Dish } from "@/lib/schemas";
 import { describe, it, expect } from "vitest";
 import { test } from "vitest";

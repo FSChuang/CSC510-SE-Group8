@@ -119,13 +119,22 @@ export default function PartyClient({ code: initialCode }: { code?: string }) {
 
   /** realtime */
   const rtRef = useRef<Awaited<ReturnType<typeof getRealtimeForRoom>> | null>(null);
-  const clientIdRef = useRef<string>(() => {
+  const clientIdRef = useRef<string>("");
+  if (!clientIdRef.current) {
     try {
       const k = "party:clientId";
-      const v = sessionStorage.getItem(k); if (v) return v;
-      const id = crypto.randomUUID(); sessionStorage.setItem(k, id); return id;
-    } catch { return crypto.randomUUID(); }
-  }) as React.MutableRefObject<string>;
+      const v = sessionStorage.getItem(k);
+      if (v) {
+        clientIdRef.current = v;
+      } else {
+        const id = crypto.randomUUID();
+        sessionStorage.setItem(k, id);
+        clientIdRef.current = id;
+      }
+    } catch {
+      clientIdRef.current = crypto.randomUUID();
+    }
+  }
   const createdRef = useRef(false);
 
   /** refs for stable handlers */

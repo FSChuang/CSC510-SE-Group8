@@ -154,16 +154,20 @@ async function main() {
       create: {
         id: dId(d),
         name: d.name,
-        categoryId: d.categoryId,
+        // 👇 use the relation field instead of categoryId
+        category: {
+          connect: { id: d.categoryId },
+        },
         tags: d.tags.join(","),
         costBand: d.costBand,
         timeBand: d.timeBand,
         isHealthy: d.isHealthy,
         allergens: d.allergens.join(","),
-        ytQuery: d.ytQuery
-      }
+        ytQuery: d.ytQuery,
+      },
     });
   }
+
 
   console.log(`Seeded categories=${categories.length}, dishes=${final.length}`);
 }

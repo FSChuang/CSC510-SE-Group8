@@ -100,7 +100,7 @@ export function mergeConstraints(prefsList: Prefs[]): {
 
   if (merged.diet?.includes("vegan")) {
     const blocked = new Set(merged.allergens ?? []);
-    const many = ["soy", "peanut", "tree_nut", "gluten"];
+    const many: z.infer<typeof AllergenEnum>[] = ["soy", "peanut", "tree_nut", "gluten"];
     const count = many.filter((a) => blocked.has(a)).length;
     if (count >= 3) {
       conflict = true;

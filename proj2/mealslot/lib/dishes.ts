@@ -51,11 +51,42 @@ type Raw = [name: string, costBand: number, timeBand: number, isHealthy: boolean
 // … keep your existing static arrays here (MAIN / VEGGIE / SOUP / MEAT / DESSERT) …
 // … and the expand() logic you already had …
 
-// build BY_CAT from static catalog
-const STATIC_BY_CAT: Record<string, UIDish[]> = /* build exactly like you had */ {};
+// Example structure (you already had these in your original code):
+const MAIN: Raw[] = [
+  // ["Spaghetti", 2, 2, true, ["gluten"], "spaghetti bolognese"],
+  // ...
+];
+const VEGGIE: Raw[] = [];
+const SOUP: Raw[] = [];
+const MEAT: Raw[] = [];
+const DESSERT: Raw[] = [];
+
+// A helper to convert Raw to UIDish + assign category
+function fromRaw(category: string, raw: Raw[]): UIDish[] {
+  return raw.map(([name, costBand, timeBand, isHealthy, allergens, ytQuery]) => ({
+    id: `${category}-${name}`, // or whatever you were using
+    name,
+    category,
+    costBand,
+    timeBand,
+    isHealthy,
+    allergens,
+    tags: [], // or any tags you had
+    ytQuery,
+  }));
+}
+
+// Build STATIC_BY_CAT from those arrays
+const STATIC_BY_CAT: Record<string, UIDish[]> = {
+  MAIN: fromRaw("MAIN", MAIN),
+  VEGGIE: fromRaw("VEGGIE", VEGGIE),
+  SOUP: fromRaw("SOUP", SOUP),
+  MEAT: fromRaw("MEAT", MEAT),
+  DESSERT: fromRaw("DESSERT", DESSERT),
+};
 
 // ---- DB-first, fallback to static ----
-export async function dishesByCategoryDbFirst(
+export async function dishes(
   category: string,
   tags: string[] = [],
   allergens: string[] = []
@@ -95,3 +126,6 @@ export async function dishesByCategoryDbFirst(
   // convert to UI shape
   return filtered.map(toUIDish);
 }
+
+// Export allDishes as a flat array of everything
+export const allDishes: UIDish[] = Object.values(STATIC_BY_CAT).flat();

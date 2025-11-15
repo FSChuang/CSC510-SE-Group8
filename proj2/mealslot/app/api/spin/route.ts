@@ -3,7 +3,7 @@ export const runtime = "nodejs"; // ensure Prisma runs in Node
 
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { dishesByCategoryDbFirst } from "@/lib/dishes";
+import { dishes } from "@/lib/dishes";
 import { Dish, PowerUpsInput } from "@/lib/schemas";
 import { weightedSpin } from "@/lib/scoring";
 import { prisma } from "@/lib/db";
@@ -75,8 +75,8 @@ export async function POST(req: NextRequest) {
     const reels: Dish[][] = [];
     const count = dishCount ?? 1;
     for (let i = 0; i < count; i++) {
-      const dishes = await dishesByCategoryDbFirst(category, tags, allergens);
-      reels.push(dishes);
+      const allDishes = await dishes(category, tags, allergens);
+      reels.push(allDishes);
     }
 
     const selection = weightedSpin(reels, lockedInput, powerups);

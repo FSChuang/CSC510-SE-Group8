@@ -67,7 +67,14 @@ export async function videoStubsFor(query: string): Promise<YtStub[]> {
     // Pad with deterministic stubs for UX reliability
     const padded = [...out];
     const stubs = stubVideos(query);
-    while (padded.length < 4) padded.push(stubs[padded.length]);
+
+    while (padded.length < 4) {
+      const idx = padded.length;
+      // stubs[idx] might be undefined in TS's eyes, but we know stubs[0] exists
+      const stub: YtStub = stubs[idx] ?? stubs[0]!;
+      padded.push(stub);
+    }
+
     return padded.slice(0, 4);
   } catch {
     // Fail safe: never break the app

@@ -28,8 +28,8 @@ export default function PartyMap({ useBrowserLocation = true, height = 360 }: Pr
     if (!window.google || !mapDivRef.current) return;
 
     // Determine center
-    const getCenter = () =>
-      new Promise<google.maps.LatLngLiteral>((resolve) => {
+    const getCenter = (): Promise<{ lat: number; lng: number }> =>
+      new Promise((resolve) => {
         if (!useBrowserLocation || !navigator.geolocation) return resolve(fallback);
         navigator.geolocation.getCurrentPosition(
           (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),

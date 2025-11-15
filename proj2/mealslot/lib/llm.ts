@@ -113,6 +113,13 @@ function stubRecipe(d: Dish, idx: number, videos: Yt[]): RecipeJSON {
     { order: 3, text: "Season and serve.", timer_minutes: 0 }
   ];
 
+  const safeVideos = videos.map((v) => ({
+    id: v.id,
+    title: v.title,
+    url: v.url,
+    thumbnail: v.thumbnail ?? "", // ensure a string
+  }));
+
   return {
     id: `rcp_${d.id}_${idx}`,
     name: `Recipe for ${d.name}`,
@@ -128,33 +135,61 @@ function stubRecipe(d: Dish, idx: number, videos: Yt[]): RecipeJSON {
       fat_g: d.isHealthy ? 12 : 24
     },
     warnings: [],
-    videos
+    videos: safeVideos,
   };
 }
+
 
 export async function recipesViaOpenAI(
   dishes: Dish[],
   videoLookup: (query: string) => Promise<Yt[]>
 ): Promise<RecipeJSON[]> {
   const key = process.env.OPENAI_API_KEY;
+
+  // ── No API key: use deterministic stub recipes ────────────────────────────────
   if (!key) {
-    const vids = await Promise.all(dishes.map((d) => videoLookup(d.ytQuery)));
-    return dishes.map((d, i) => stubRecipe(d, i, vids[i]!));
+    const allRawVideos = await Promise.all(
+      dishes.map((d) => videoLookup(d.ytQuery))
+    );
+
+    // Normalize thumbnails so they’re always strings
+    const allSafeVideos = allRawVideos.map((arr) =>
+      (arr ?? []).map((v) => ({
+        id: v.id,
+        title: v.title,
+        url: v.url,
+        thumbnail: v.thumbnail ?? "",
+      }))
+    );
+
+    return dishes.map((d, i) => stubRecipe(d, i, allSafeVideos[i] ?? []));
   }
 
+  // ── With API key: call OpenAI, still normalizing videos ──────────────────────
   const out: RecipeJSON[] = [];
+
   for (let i = 0; i < dishes.length; i++) {
     const d = dishes[i]!;
-    const videos = await videoLookup(d.ytQuery);
+    const rawVideos = await videoLookup(d.ytQuery);
+    const videos = (rawVideos ?? []).map((v) => ({
+      id: v.id,
+      title: v.title,
+      url: v.url,
+      thumbnail: v.thumbnail ?? "",
+    }));
 
     const userPrompt = `
 Return a single JSON object describing a cooking recipe for: "${d.name}".
 Constraints:
 - servings: 2
-- total_minutes consistent with ~${d.timeBand === 1 ? "≤30" : d.timeBand === 2 ? "30–45" : "45–60"} minutes
+- total_minutes consistent with ~${
+      d.timeBand === 1 ? "≤30" : d.timeBand === 2 ? "30–45" : "45–60"
+    } minutes
 - include realistic ingredients with quantities/units
 - steps should be numbered and include timer_minutes
-- consider common allergens for this dish name: ${d.allergens.join(", ") || "none"}
+- consider common allergens for this dish name: ${
+      d.allergens.join(", ") || "none"
+    }
 - keep equipment minimal (pan/pot/knife/board)
 Return ONLY JSON.
 `;
@@ -164,23 +199,24 @@ Return ONLY JSON.
         method: "POST",
         headers: {
           "content-type": "application/json",
-          authorization: `Bearer ${key}`
+          authorization: `Bearer ${key}`,
         },
         body: JSON.stringify({
           model: "gpt-4o-mini",
           response_format: {
             type: "json_schema",
-            json_schema: { name: "recipe", schema: RECIPE_JSON_SCHEMA, strict: true }
+            json_schema: { name: "recipe", schema: RECIPE_JSON_SCHEMA, strict: true },
           },
           messages: [
             { role: "system", content: SYS_PROMPT },
-            { role: "user", content: userPrompt }
+            { role: "user", content: userPrompt },
           ],
-          temperature: 0.4
-        })
+          temperature: 0.4,
+        }),
       });
 
       if (!res.ok) throw new Error(`OpenAI ${res.status}`);
+
       const data = (await res.json()) as any;
       const content: string =
         data?.choices?.[0]?.message?.content ??
@@ -188,22 +224,30 @@ Return ONLY JSON.
         "{}";
 
       const parsed = JSON.parse(content);
+
       const recipe: RecipeJSON = {
         id: parsed.id ?? `rcp_${d.id}_${i}`,
         name: parsed.name ?? `Recipe for ${d.name}`,
         servings: parsed.servings ?? 2,
-        total_minutes: parsed.total_minutes ?? (d.timeBand === 1 ? 25 : d.timeBand === 2 ? 35 : 50),
+        total_minutes:
+          parsed.total_minutes ??
+          (d.timeBand === 1 ? 25 : d.timeBand === 2 ? 35 : 50),
         equipment: parsed.equipment ?? ["pan", "knife", "board"],
         ingredients: parsed.ingredients ?? [],
         steps: parsed.steps ?? [],
-        nutrition: parsed.nutrition ?? { kcal: 500, protein_g: 25, carbs_g: 50, fat_g: 20 },
+        nutrition:
+          parsed.nutrition ?? { kcal: 500, protein_g: 25, carbs_g: 50, fat_g: 20 },
         warnings: parsed.warnings ?? [],
-        videos
+        videos,
       };
+
       out.push(recipe);
     } catch {
+      // Fallback: stubbed recipe with the same normalized videos
       out.push(stubRecipe(d, i, videos));
     }
   }
+
   return out;
 }
+

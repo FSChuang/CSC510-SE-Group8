@@ -23,6 +23,7 @@ module.exports = {
       "error",
       { "newlines-between": "always", alphabetize: { order: "asc" } }
     ],
-    "@typescript-eslint/no-explicit-any": "error"
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/await-thenable": "off"
   }
 };

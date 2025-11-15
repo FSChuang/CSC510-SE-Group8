@@ -87,7 +87,9 @@ export default function SpinResult({
         if (d?.mid) pills.push("mid");
         if (d?.slow) pills.push("slow");
         if (d?.isHealthy) pills.push("healthy");
-        const v = votes[i];
+
+        const v: VoteInfo =
+          votes[i] ?? { keep: 0, reroll: 0, majority: 1, iVotedKeep: false, iVotedReroll: false };
 
         return (
           <div key={label} className="rounded-xl border p-3 dark:border-neutral-800">

@@ -25,16 +25,27 @@ function scoreDish(d: Dish, power: PowerUpsInput): number {
 /**
  * Deterministic weighted choice given an RNG in [0,1).
  */
-function weightedChoice<T>(items: T[], weights: number[], rnd: () => number): T | undefined {
-  const total = weights.reduce((a, b) => a + b, 0);
+function weightedChoice<T>(
+  items: T[],
+  weights: number[],
+  rnd: () => number
+): T | undefined {
+  // Only consider up to the shortest length to avoid undefined elements
+  const n = Math.min(items.length, weights.length);
+  if (n === 0) return undefined;
+
+  const total = weights.slice(0, n).reduce((a, b) => a + b, 0);
   if (!isFinite(total) || total <= 0) return undefined;
+
   let r = rnd() * total;
-  for (let i = 0; i < items.length; i++) {
-    r -= weights[i];
+  for (let i = 0; i < n; i++) {
+    const w = weights[i] ?? 0; // extra safety, but should always exist now
+    r -= w;
     if (r <= 0) return items[i];
   }
+
   // roundoff fallback
-  return items[items.length - 1];
+  return items[n - 1];
 }
 
 /**
@@ -75,7 +86,7 @@ export function weightedSpin(
         timeBand: 2,
         isHealthy: true,
         allergens: [],
-        ytQuery: "quick recipe"
+        ytQuery: "quick recipe",
       });
       continue;
     }
@@ -92,11 +103,11 @@ export function weightedSpin(
 
     // Build weights and pick
     const weights = reel.map((d) => scoreDish(d, powerups));
-    const pick = weightedChoice(reel, weights, rng);
+    const pick = weightedChoice(reel, weights, rng) ?? reel[0]!;
 
-    // Final safety: always push something
-    out.push(pick ?? reel[0]);
+    out.push(pick);
   }
+
 
   return out;
 }
