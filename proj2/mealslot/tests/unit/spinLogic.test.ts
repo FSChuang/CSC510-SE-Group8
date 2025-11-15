@@ -1,6 +1,9 @@
 import { weightedSpin } from "@/lib/scoring";
 import { Dish } from "@/lib/schemas";
 import { describe, it, expect } from "vitest";
+import { test } from "vitest";
+
+test.skip("placeholder", () => {});
 
 const makeDish = (id: string, healthy: boolean, cost: number, time: number): Dish => ({
   id,

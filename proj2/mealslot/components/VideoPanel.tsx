@@ -2,7 +2,7 @@
 
 import React from "react"
 import { useState } from "react";
-import Modal from "@/components/ui/Modal";
+import Modal from "../components/ui/Modal";
 
 export type Video = {
   id: string;

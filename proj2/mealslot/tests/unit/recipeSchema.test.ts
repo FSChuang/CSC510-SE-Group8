@@ -1,5 +1,8 @@
 import { RecipeSchema } from "@/lib/schemas";
 import { describe, it, expect } from "vitest";
+import { test } from "vitest";
+
+test.skip("placeholder", () => {});
 
 describe("RecipeSchema", () => {
   it("validates stub", () => {

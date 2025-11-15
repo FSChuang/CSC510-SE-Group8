@@ -1,4 +1,6 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "vitest";
+
+test.skip("placeholder", () => {});
 
 test("full smoke: spin → cook at home modal", async ({ page }) => {
   await page.goto("/");
