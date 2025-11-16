@@ -1,4 +1,4 @@
-PROJECT 3 README: GROUP 10 EXTENDING MEALSLOT
+# PROJECT 3 README: GROUP 10 EXTENDING MEALSLOT
 
 [![Coverage Status](https://coveralls.io/repos/github/rithikkulkarni/csc-510-proj-3/badge.svg?branch=main)](https://coveralls.io/github/rithikkulkarni/csc-510-proj-3?branch=main)
 
