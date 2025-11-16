@@ -1,5 +1,5 @@
 ![Run Vitest](https://github.com/FSChuang/CSC510-SE-Group8/actions/workflows/test.yml/badge.svg)
-[![codecov](https://codecov.io/gh/FSChunag/CSC510-SE-Group8/branch/main/graph/badge.svg)](https://codecov.io/gh/FSChuang/CSC510-SE-Group8)
+[![Coverage Status](https://coveralls.io/repos/github/rithikkulkarni/csc-510-proj-3/badge.svg?branch=main)](https://coveralls.io/github/rithikkulkarni/csc-510-proj-3?branch=main)
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Release](https://img.shields.io/github/v/release/FSChuang/CSC510-SE-Group8)
