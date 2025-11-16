@@ -1,6 +1,7 @@
 # PROJECT 3 README: GROUP 10 EXTENDING MEALSLOT
 
 [![Coverage Status](https://coveralls.io/repos/github/rithikkulkarni/csc-510-proj-3/badge.svg?branch=main)](https://coveralls.io/github/rithikkulkarni/csc-510-proj-3?branch=main)
+![GitHub issues](https://img.shields.io/github/issues/rithikkulkarni/csc-510-proj-3)
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Release](https://img.shields.io/github/v/release/FSChuang/CSC510-SE-Group8)
