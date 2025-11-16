@@ -40,6 +40,6 @@ jobs:
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@v2
         with:
-          files: coverage/lcov.info
+          files: proj2/mealslot/coverage/lcov.info
           token: ${{ secrets.COVERALLS_TOKEN }} # not needed for public repos
           fail_ci_if_error: true
