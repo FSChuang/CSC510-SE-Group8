@@ -19,7 +19,7 @@ jobs:
           node-version: 20
 
       - name: Install deps
-        run: npm ci
+        run: pnpm ci
 
       - name: Run ESLint
-        run: npm run lint
+        run: pnpm lint
