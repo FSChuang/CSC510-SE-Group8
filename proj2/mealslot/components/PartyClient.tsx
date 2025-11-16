@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-unused-expressions */
+
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import { Crown, Link as LinkIcon, LogOut, Shuffle, RotateCcw, Lock, Unlock, ThumbsUp } from "lucide-react";
 import { z } from "zod";
@@ -384,7 +386,7 @@ export default function PartyClient({ code: initialCode }: { code?: string }) {
 
   /** prefs push */
   const [prefsStateGuard] = useState(0); // no-op, keeps deps stable
-  const pushPrefs = useCallback(async (next: Partial<z.infer<typeof PrefsSchema>>) => {
+    const pushPrefs = useCallback(async (next: Partial<z.infer<typeof PrefsSchema>>) => {
     const merged = { ...prefs, ...next };
     setPrefs(merged);
     if (!state?.party?.id || !memberId) return;
@@ -397,8 +399,8 @@ export default function PartyClient({ code: initialCode }: { code?: string }) {
       setState(s => s ? { ...s, party: { ...s.party, constraints: j.merged } } : s);
     }
     try { rtRef.current?.emit("prefs", { code: activeCode, memberId, prefs: merged }); } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefs, state?.party?.id, memberId, activeCode, prefsStateGuard]);
+
 
   /** broadcast helpers */
   const summarize = (trip: SpinTriple) =>

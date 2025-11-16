@@ -79,7 +79,6 @@ export default function RecipePanel({ recipes }: { recipes: RecipeJSON[] }) {
                   >
                     {/* If a thumbnail is provided by the stub/real API, show it; else fallback to a square */}
                     {"thumbnail" in v && v.thumbnail ? (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={v.thumbnail}
                         alt=""

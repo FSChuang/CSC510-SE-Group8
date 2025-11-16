@@ -47,7 +47,6 @@ export function SlotMachine({ reelCount, onSpin, cooldownMs, busy, selection }: 
       }
     });
     setLocked(next);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selection && selection.map((d) => d.id).join("|")]);
 
   const toggleLock = (i: number) => {

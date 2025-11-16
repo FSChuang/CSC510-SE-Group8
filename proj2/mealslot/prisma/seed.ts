@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -155,9 +155,7 @@ async function main() {
         id: dId(d),
         name: d.name,
         // 👇 use the relation field instead of categoryId
-        category: {
-          connect: { id: d.categoryId },
-        },
+        category: d.categoryId,
         tags: d.tags.join(","),
         costBand: d.costBand,
         timeBand: d.timeBand,
