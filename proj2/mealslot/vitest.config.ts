@@ -13,12 +13,7 @@ export default defineConfig({
     setupFiles: ["./tests/setupTests.ts"],
     globals: true,
     exclude: [
-      // "tests/components/VideoPanel.test.tsx",
       "tests/e2e/smoke.spec.ts",
-      // "tests/unit/apiRoutes.test.ts",
-      // "tests/unit/mergeConstraints.test.ts",
-      // "tests/unit/recipeSchema.test.ts",
-      // "tests/unit/spinLogic.test.ts",
       "node_modules/**",
       "dist/**",
       "coverage/**",
@@ -26,6 +21,11 @@ export default defineConfig({
     coverage: {
       reporter: ['text', 'lcov'], // lcov file will be written to coverage/lcov.info
       // optionally: provider: 'c8' or other settings
+      include: [
+        "app/**",
+        "components/**",
+        "lib/**",
+      ]
     },
   },
 });

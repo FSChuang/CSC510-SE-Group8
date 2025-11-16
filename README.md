@@ -1,6 +1,12 @@
 # PROJECT 3 README: GROUP 10 EXTENDING MEALSLOT
 
 [![Coverage Status](https://coveralls.io/repos/github/rithikkulkarni/csc-510-proj-3/badge.svg?branch=main)](https://coveralls.io/github/rithikkulkarni/csc-510-proj-3?branch=main)
+[![GitHub issues](https://img.shields.io/github/issues/rithikkulkarni/csc-510-proj-3)](https://github.com/rithikkulkarni/csc-510-proj-3/issues)
+[![Open Pull Requests](https://img.shields.io/github/issues-pr/rithikkulkarni/csc-510-proj-3)](https://github.com/rithikkulkarni/csc-510-proj-3/pulls)
+[![Contributors](https://img.shields.io/github/contributors/rithikkulkarni/csc-510-proj-3)](https://github.com/rithikkulkarni/csc-510-proj-3/graphs/contributors)
+[![Last Commit](https://img.shields.io/github/last-commit/rithikkulkarni/csc-510-proj-3)](https://github.com/rithikkulkarni/csc-510-proj-3/commits)
+
+
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Release](https://img.shields.io/github/v/release/FSChuang/CSC510-SE-Group8)
