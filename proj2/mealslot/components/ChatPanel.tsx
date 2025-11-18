@@ -1,6 +1,6 @@
 // --- path: components/ChatPanel.tsx ---
-import { useEffect, useRef, useState } from "react";
-
+// import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 export type ChatMsg = { id: string; ts: number; fromId: string; name: string; text: string };
 
 export default function ChatPanel({
@@ -20,7 +20,7 @@ export default function ChatPanel({
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [messages]);
-
+ 
   return (
     <div className="rounded-2xl border p-3 dark:border-neutral-800">
       <div className="mb-2 text-sm font-semibold">Party chat</div>

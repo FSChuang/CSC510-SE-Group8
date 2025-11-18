@@ -1,7 +1,7 @@
 // --- path: components/DishCountInput.tsx ---
 "use client";
 
-import { useState } from "react";
+import React, { useState, type ChangeEvent } from "react";
 
 type DishCountInputProps = {
   value: number;

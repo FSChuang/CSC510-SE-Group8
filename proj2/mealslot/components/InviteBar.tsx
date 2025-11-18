@@ -1,7 +1,7 @@
 // --- path: components/InviteBar.tsx ---
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link as LinkIcon, Check } from "lucide-react";
 
 export default function InviteBar() {
