@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { RecipeJSON } from "@/lib/schemas";
 

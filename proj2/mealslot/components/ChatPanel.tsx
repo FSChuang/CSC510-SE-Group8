@@ -20,7 +20,7 @@ export default function ChatPanel({
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [messages]);
- 
+
   return (
     <div className="rounded-2xl border p-3 dark:border-neutral-800">
       <div className="mb-2 text-sm font-semibold">Party chat</div>

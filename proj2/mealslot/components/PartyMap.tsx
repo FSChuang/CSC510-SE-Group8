@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import React, {useEffect, useRef} from "react";
 import Script from "next/script";
 
 type Props = {

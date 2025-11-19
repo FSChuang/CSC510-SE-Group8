@@ -1,4 +1,5 @@
 // --- path: components/SpinResult.tsx ---
+import React from "react";
 import { Lock, RefreshCcw, ThumbsUp } from "lucide-react";
 
 type Reel = {
