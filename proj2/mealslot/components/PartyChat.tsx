@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
+import React, { useEffect, useRef, useState } from "react";
 type ChatMsg = { id: string; ts: number; nick: string; text: string };
 
 type Props = {

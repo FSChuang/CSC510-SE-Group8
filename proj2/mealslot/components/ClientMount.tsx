@@ -1,7 +1,8 @@
 // --- path: components/ClientMount.tsx ---
 "use client";
 
-import type { ReactNode } from "react";
+// import type { ReactNode } from "react";
+import React, { type ReactNode } from "react";
 // import HardDarkSwitch from "@/components/HardDarkSwitch";
 
 /** Client-only wrapper rendered inside the server layout’s <body>. */

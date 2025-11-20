@@ -1,6 +1,6 @@
 // --- path: components/ChatPanel.tsx ---
-import { useEffect, useRef, useState } from "react";
-
+// import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 export type ChatMsg = { id: string; ts: number; fromId: string; name: string; text: string };
 
 export default function ChatPanel({

@@ -1,7 +1,7 @@
 // --- path: components/Toast.tsx ---
 "use client";
 
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 
 export type ToastMsg = { id: string; text: string; ttl?: number };
 

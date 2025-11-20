@@ -2,7 +2,13 @@
 
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+  } from "react";
 import { Crown, Link as LinkIcon, LogOut, Shuffle, RotateCcw, Lock, Unlock, ThumbsUp } from "lucide-react";
 import { z } from "zod";
 import { PrefsSchema, DietEnum, AllergenEnum } from "@/lib/party";
