@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@prisma/client": "5.20.0",
+    "@stackframe/stack": "^2.8.52",
     "autoprefixer": "10.4.20",
     "bcryptjs": "2.4.3",
     "clsx": "2.1.1",
