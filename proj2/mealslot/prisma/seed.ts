@@ -1,177 +1,156 @@
- 
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const categories = [
-  { id: "main", name: "Main", tags: "hearty,protein" },
-  { id: "veggie", name: "Veggie", tags: "vegetarian,greens" },
-  { id: "soup", name: "Soup", tags: "warm,comfort" },
-  { id: "meat", name: "Meat", tags: "protein" },
-  { id: "dessert", name: "Dessert", tags: "sweet" }
-];
-
 type DishSeed = {
   name: string;
-  categoryId: string;
+  category: string;
   tags: string[];
   costBand: number;
   timeBand: number;
   isHealthy: boolean;
   allergens: string[];
-  ytQuery: string;
+  ytQuery: string | null;
+  cuisineType?: string;
+  keyIngredients?: string[];
 };
 
-const MAIN = [
-  ["Margherita Pizza", 2, 2, false, ["gluten", "dairy"], "margherita pizza"],
-  ["Grilled Chicken Bowl", 2, 2, true, [], "grilled chicken bowl"],
-  ["Tofu Stir Fry", 1, 1, true, ["soy"], "tofu stir fry"],
-  ["Pasta Bolognese", 2, 2, false, ["gluten"], "pasta bolognese"],
-  ["Sushi Platter", 3, 3, true, ["fish"], "sushi at home"],
-  ["Veggie Burrito", 1, 1, true, ["gluten"], "veggie burrito"],
-  ["Beef Tacos", 1, 1, false, ["gluten"], "beef tacos"],
-  ["Shrimp Fried Rice", 1, 1, false, ["shellfish"], "shrimp fried rice"],
-  ["Paneer Butter Masala", 2, 2, false, ["dairy"], "paneer butter masala"],
-  ["Bibimbap", 2, 2, true, ["egg"], "bibimbap recipe"],
-  ["Falafel Bowl", 1, 2, true, [], "falafel bowl"],
-  ["Ramen", 2, 3, false, ["gluten"], "home ramen"],
-  ["Pho", 2, 3, true, [], "pho recipe"],
-  ["Steak & Potatoes", 3, 2, false, [], "steak potatoes"]
-] as const;
+const CATEGORIES = ["breakfast", "lunch", "dinner", "dessert", "snack"];
 
-const VEGGIE = [
-  ["Caesar Salad", 1, 1, true, ["dairy"], "caesar salad"],
-  ["Greek Salad", 1, 1, true, ["dairy"], "greek salad"],
-  ["Quinoa Bowl", 1, 1, true, [], "quinoa bowl"],
-  ["Caprese", 1, 1, true, ["dairy"], "caprese salad"],
-  ["Roasted Veg Medley", 1, 2, true, [], "roasted vegetables"],
-  ["Kale & Chickpea", 1, 1, true, [], "kale chickpea salad"],
-  ["Coleslaw", 1, 1, true, [], "coleslaw"],
-  ["Cobb Salad", 2, 1, false, ["egg", "dairy"], "cobb salad"],
-  ["Avocado Toast", 1, 1, true, ["gluten"], "avocado toast"],
-  ["Hummus Plate", 1, 1, true, ["sesame"], "hummus plate"]
-] as const;
+// --------------------- BREAKFAST ---------------------
+const BREAKFAST: (string | number | boolean | string[] | null)[][] = [
+  ["Overnight Oats", 1, 1, true, ["oats", "dairy"], "overnight oats recipe", "American", ["oats", "milk", "honey"]],
+  ["Greek Yogurt Parfait", 1, 1, true, ["dairy"], "yogurt parfait", "Greek", ["yogurt", "berries", "granola"]],
+  ["Veggie Omelette", 1, 1, true, ["egg", "dairy"], "veggie omelette", "French", ["eggs", "bell pepper", "spinach"]],
+  ["Avocado Toast", 1, 1, true, ["gluten"], "avocado toast", "American", ["avocado", "bread", "olive oil"]],
+  ["Scrambled Eggs & Toast", 1, 1, true, ["egg", "gluten"], "scrambled eggs toast", "American", ["eggs", "bread", "butter"]],
+  ["Breakfast Burrito", 2, 2, false, ["gluten", "egg", "dairy"], "breakfast burrito", "Mexican", ["tortilla", "eggs", "cheese", "beans"]],
+  ["Protein Smoothie", 1, 1, true, ["dairy"], "breakfast protein smoothie", "American", ["protein powder", "milk", "banana"]],
+  ["Berry Smoothie Bowl", 1, 1, true, [], "smoothie bowl", "American", ["berries", "banana", "granola"]],
+  ["Banana Pancakes", 2, 2, false, ["gluten", "egg", "dairy"], "banana pancakes", "American", ["flour", "banana", "milk", "egg"]],
+  ["Whole-Grain Waffles", 2, 2, false, ["gluten", "egg", "dairy"], "healthy waffles", "American", ["whole wheat flour", "milk", "egg"]],
+  ["French Toast", 2, 2, false, ["gluten", "egg", "dairy"], "french toast", "French", ["bread", "egg", "milk"]],
+  ["Bagel & Lox", 2, 2, false, ["gluten", "fish", "dairy"], "bagel and lox", "Jewish-American", ["bagel", "salmon", "cream cheese"]],
+  ["Breakfast Sandwich", 2, 2, false, ["gluten", "egg", "dairy"], "egg cheese breakfast sandwich", "American", ["bread", "egg", "cheese"]],
+  ["Shakshuka", 2, 2, true, ["egg"], "shakshuka", "Middle Eastern", ["eggs", "tomato", "bell pepper"]],
+  ["Chia Pudding", 1, 1, true, [], "chia pudding", "Various", ["chia seeds", "milk", "honey"]],
+  ["Cottage Cheese Bowl", 1, 1, true, ["dairy"], "cottage cheese breakfast bowl", "American", ["cottage cheese", "fruit", "honey"]]
+];
 
-const SOUP = [
-  ["Tomato Soup", 1, 1, true, [], "tomato soup"],
-  ["Chicken Noodle Soup", 1, 2, true, ["gluten"], "chicken noodle soup"],
-  ["Miso Soup", 1, 1, true, ["soy"], "miso soup"],
-  ["Lentil Soup", 1, 2, true, [], "lentil soup"],
-  ["Minestrone", 1, 2, true, ["gluten"], "minestrone"],
-  ["Butternut Squash", 1, 2, true, [], "butternut squash soup"],
-  ["Beef Broth", 1, 2, false, [], "beef broth soup"],
-  ["Clam Chowder", 2, 2, false, ["shellfish", "dairy"], "clam chowder"],
-  ["Hot & Sour", 1, 1, true, ["soy"], "hot sour soup"],
-  ["Corn Chowder", 1, 2, false, ["dairy"], "corn chowder"]
-] as const;
+// --------------------- LUNCH ---------------------
+const LUNCH: (string | number | boolean | string[] | null)[][] = [
+  ["Caesar Salad", 1, 1, true, ["dairy"], "caesar salad", "Italian", ["lettuce", "parmesan", "croutons"]],
+  ["Turkey Sandwich", 1, 1, true, ["gluten"], "turkey sandwich", "American", ["turkey", "bread", "lettuce"]],
+  ["Veggie Wrap", 1, 1, true, ["gluten"], "veggie wrap", "American", ["tortilla", "vegetables", "hummus"]],
+  ["Grilled Cheese Sandwich", 1, 1, false, ["gluten", "dairy"], "grilled cheese", "American", ["bread", "cheese", "butter"]],
+  ["Chicken Salad", 1, 1, true, ["dairy"], "chicken salad", "American", ["chicken", "lettuce", "mayonnaise"]],
+];
 
-const MEAT = [
-  ["Beef Bulgogi", 2, 2, false, ["soy"], "beef bulgogi"],
-  ["BBQ Ribs", 3, 3, false, [], "bbq ribs"],
-  ["Chicken Satay", 2, 2, true, ["peanut"], "chicken satay"],
-  ["Pork Schnitzel", 2, 2, false, ["gluten", "egg"], "pork schnitzel"],
-  ["Lamb Chops", 3, 2, false, [], "lamb chops"],
-  ["Teriyaki Chicken", 2, 2, false, ["soy"], "teriyaki chicken"],
-  ["Turkey Meatballs", 1, 2, true, ["egg"], "turkey meatballs"],
-  ["Beef Stir Fry", 1, 1, false, ["soy"], "beef stir fry"],
-  ["Roast Chicken", 2, 3, true, [], "roast chicken"],
-  ["Fish & Chips", 2, 2, false, ["gluten", "fish"], "fish and chips"]
-] as const;
+// --------------------- DINNER ---------------------
+const DINNER: (string | number | boolean | string[] | null)[][] = [
+  ["Grilled Salmon with Veggies", 3, 3, true, ["fish"], "grilled salmon dinner", "American", ["salmon", "vegetables", "lemon"]],
+  ["Chicken Alfredo Pasta", 3, 3, false, ["gluten", "dairy"], "chicken alfredo pasta", "Italian", ["chicken", "pasta", "cream"]],
+  ["Beef Stir Fry", 2, 2, true, ["soy"], "beef stir fry dinner", "Chinese", ["beef", "soy sauce", "vegetables"]],
+  ["Vegetable Curry", 2, 2, true, [], "vegetable curry", "Indian", ["vegetables", "coconut milk", "spices"]],
+  ["Shrimp Scampi", 3, 3, false, ["shellfish", "gluten"], "shrimp scampi recipe", "Italian", ["shrimp", "garlic", "butter"]],
+  ["Lentil Stew", 1, 2, true, [], "lentil stew", "Middle Eastern", ["lentils", "carrots", "onion"]],
+  ["Stuffed Bell Peppers", 2, 2, true, [], "stuffed bell peppers", "Mediterranean", ["bell pepper", "rice", "vegetables"]],
+  ["Teriyaki Chicken Bowl", 2, 2, false, ["soy"], "teriyaki chicken bowl", "Japanese", ["chicken", "soy sauce", "rice"]],
+  ["Tofu & Broccoli Stir Fry", 1, 2, true, ["soy"], "tofu broccoli stir fry", "Chinese", ["tofu", "broccoli", "soy sauce"]],
+  ["Spaghetti Bolognese", 2, 3, false, ["gluten"], "spaghetti bolognese", "Italian", ["beef", "tomato", "pasta"]],
+  ["Pesto Pasta with Chicken", 2, 3, false, ["gluten", "dairy"], "chicken pesto pasta", "Italian", ["chicken", "pasta", "pesto"]],
+  ["Roast Chicken with Potatoes", 3, 3, true, [], "roast chicken potatoes", "American", ["chicken", "potatoes", "herbs"]],
+  ["Veggie Fried Rice", 1, 2, true, ["soy"], "vegetable fried rice", "Chinese", ["rice", "vegetables", "soy sauce"]],
+  ["BBQ Ribs", 3, 3, false, [], "bbq ribs", "American", ["pork ribs", "bbq sauce"]],
+  ["Miso Glazed Cod", 3, 3, true, ["fish", "soy"], "miso glazed cod", "Japanese", ["cod", "miso", "soy sauce"]],
+  ["Falafel Plate with Rice", 2, 2, true, ["sesame"], "falafel plate dinner", "Middle Eastern", ["chickpeas", "sesame", "spices"]],
+  ["Thai Green Curry", 2, 3, false, ["soy"], "thai green curry", "Thai", ["coconut milk", "vegetables", "green curry paste"]],
+  ["Beef and Broccoli", 2, 2, false, ["soy"], "beef and broccoli", "Chinese", ["beef", "broccoli", "soy sauce"]],
+  ["Eggplant Parmesan", 2, 3, false, ["gluten", "dairy"], "eggplant parmesan", "Italian", ["eggplant", "cheese", "tomato"]],
+  ["Chicken Fajitas", 2, 2, true, [], "chicken fajitas", "Mexican", ["chicken", "bell pepper", "onion"]],
+  ["Turkey Meatballs with Pasta", 2, 3, false, ["gluten", "egg"], "turkey meatballs pasta", "Italian", ["turkey", "pasta", "egg"]],
+  ["Seared Tuna Bowl", 3, 3, true, ["fish", "soy"], "seared tuna bowl", "Japanese", ["tuna", "rice", "soy sauce"]],
+  ["Chickpea & Spinach Stew", 1, 2, true, [], "chickpea spinach stew", "Mediterranean", ["chickpeas", "spinach", "tomato"]],
+  ["Lamb Chops with Asparagus", 3, 3, false, [], "lamb chops dinner", "Mediterranean", ["lamb", "asparagus", "herbs"]],
+  ["Coconut Curry Shrimp", 3, 3, false, ["shellfish"], "coconut shrimp curry", "Thai", ["shrimp", "coconut milk", "spices"]],
+  ["Margherita Pizza (Dinner Size)", 2, 3, false, ["gluten", "dairy"], "margherita pizza dinner", "Italian", ["flour", "cheese", "tomato"]],
+  ["Vegetable Pad Thai", 2, 2, true, ["peanut", "soy", "egg"], "vegetable pad thai", "Thai", ["rice noodles", "peanuts", "vegetables"]],
+  ["Salmon Teriyaki Bowl", 3, 3, true, ["fish", "soy"], "salmon teriyaki", "Japanese", ["salmon", "rice", "soy sauce"]],
+  ["Stuffed Portobello Mushrooms", 2, 2, true, ["dairy"], "stuffed portobello mushrooms", "Italian", ["mushrooms", "cheese", "breadcrumbs"]],
+  ["Chicken Tikka Masala", 3, 3, false, ["dairy"], "chicken tikka masala", "Indian", ["chicken", "tomato", "cream"]]
+  // ... continue for remaining dinner items
+];
 
-const DESSERT = [
-  ["Chia Pudding", 1, 1, true, [], "chia pudding"],
-  ["Chocolate Brownie", 1, 1, false, ["gluten"], "chocolate brownie"],
-  ["Fruit Salad", 1, 1, true, [], "fruit salad"],
-  ["Tiramisu", 2, 2, false, ["dairy", "egg", "gluten"], "tiramisu"],
-  ["Panna Cotta", 2, 2, false, ["dairy"], "panna cotta"],
-  ["Apple Pie", 2, 2, false, ["gluten"], "apple pie"],
-  ["Cheesecake", 2, 2, false, ["dairy", "gluten"], "cheesecake"],
-  ["Yogurt Parfait", 1, 1, true, ["dairy"], "yogurt parfait"],
-  ["Mochi", 1, 1, true, [], "mochi dessert"],
-  ["Banana Bread", 1, 2, false, ["gluten"], "banana bread"]
-] as const;
+// --------------------- DESSERT ---------------------
+const DESSERT: (string | number | boolean | string[] | null)[][] = [
+  ["Chocolate Brownie", 1, 2, false, ["gluten", "dairy", "egg"], "chocolate brownie", "American", ["chocolate", "flour", "butter"]],
+  ["Cheesecake", 2, 3, false, ["dairy", "gluten"], "classic cheesecake", "American", ["cream cheese", "sugar", "eggs"]],
+  ["Apple Pie", 2, 2, false, ["gluten"], "apple pie", "American", ["apple", "flour", "butter"]],
+  ["Fruit Salad", 1, 1, true, [], "fruit salad dessert", "Various", ["assorted fruits"]],
+  ["Chia Pudding", 1, 1, true, [], "chia pudding dessert", "Various", ["chia seeds", "milk", "honey"]]
+  // ... continue for remaining dessert items
+];
 
-function asDishes(catId: string, arr: readonly any[]) {
-  return arr.map((a: any, i: number) => ({
-    id: `${catId}_${i}_${a[0].toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
+// --------------------- SNACK ---------------------
+const SNACK: (string | number | boolean | string[] | null)[][] = [
+  ["Granola Bar", 1, 1, true, ["nuts"], "granola bar recipe", "American", ["oats", "honey", "nuts"]],
+  ["Veggie Sticks & Hummus", 1, 1, true, [], "veggie hummus snack", "Mediterranean", ["carrot", "cucumber", "hummus"]],
+  ["Trail Mix", 1, 1, true, ["nuts"], "trail mix recipe", "Various", ["nuts", "dried fruit", "chocolate chips"]]
+];
+
+// --------------------- HELPER FUNCTIONS ---------------------
+function asDishes(category: string, arr: readonly any[]): DishSeed[] {
+  return arr.map((a) => ({
     name: a[0],
-    categoryId: catId,
+    category,
     tags: [],
     costBand: a[1],
     timeBand: a[2],
     isHealthy: a[3],
     allergens: a[4],
-    ytQuery: a[5]
-  })) as DishSeed[];
+    ytQuery: a[5] || null,
+    cuisineType: a[6] || null,
+    keyIngredients: a[7] || [],
+  }));
 }
 
+function dId(d: DishSeed) {
+  return `${d.category}_${d.name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`.slice(0, 50);
+}
+
+// --------------------- MAIN ---------------------
 async function main() {
-  console.log("Seeding…");
-  for (const c of categories) {
-    await prisma.category.upsert({
-      where: { id: c.id },
-      update: {},
-      create: c
-    });
-  }
+  console.log("Seeding dishes…");
 
   const all: DishSeed[] = [
-    ...asDishes("main", MAIN),
-    ...asDishes("veggie", VEGGIE),
-    ...asDishes("soup", SOUP),
-    ...asDishes("meat", MEAT),
-    ...asDishes("dessert", DESSERT)
+    ...asDishes("breakfast", BREAKFAST),
+    ...asDishes("lunch", LUNCH),
+    ...asDishes("dinner", DINNER),
+    ...asDishes("dessert", DESSERT),
+    ...asDishes("snack", SNACK),
   ];
 
-  // Expand to ~80+ by duplicating slight variants with suffixes
-  const extras: DishSeed[] = [];
-  const variants = ["(Spicy)", "(Low-carb)", "(Gluten-free)"];
-  for (const base of all) {
-    for (const v of variants) {
-      if (extras.length + all.length >= 85) break;
-      extras.push({
-        ...base,
-        name: `${base.name} ${v}`,
-        tags: [...base.tags, v.replace(/[()]/g, "").toLowerCase()],
-        costBand: base.costBand,
-        timeBand: base.timeBand,
-        isHealthy: base.isHealthy || v.includes("Low-carb") || v.includes("Gluten-free"),
-        allergens: v.includes("Gluten-free")
-          ? base.allergens.filter((x) => x !== "gluten")
-          : base.allergens,
-        ytQuery: base.ytQuery
-      });
-    }
-    if (extras.length + all.length >= 85) break;
-  }
-
-  const final = [...all, ...extras].slice(0, 85);
-
-  for (const d of final) {
+  for (const d of all) {
     await prisma.dish.upsert({
       where: { id: dId(d) },
       update: {},
       create: {
         id: dId(d),
         name: d.name,
-        // 👇 use the relation field instead of categoryId
-        category: d.categoryId,
+        category: d.category,
         tags: d.tags.join(","),
+        allergens: d.allergens.join(","),
         costBand: d.costBand,
         timeBand: d.timeBand,
         isHealthy: d.isHealthy,
-        allergens: d.allergens.join(","),
         ytQuery: d.ytQuery,
+        cuisineType: d.cuisineType,
+        keyIngredients: d.keyIngredients?.join(","),
       },
     });
   }
 
-
-  console.log(`Seeded categories=${categories.length}, dishes=${final.length}`);
-}
-
-function dId(d: DishSeed) {
-  return `${d.categoryId}_${d.name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`.slice(0, 50);
+  console.log(`Seeded dishes=${all.length}`);
 }
 
 main()

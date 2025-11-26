@@ -25,18 +25,20 @@ model Category {
 }
 
 model Dish {
-  id        String     @id
-  name      String
-  category  String
-  tags      String
-  allergens String
-  costBand  Int
-  timeBand  Int
-  isHealthy Boolean    @default(false)
-  ytQuery   String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  favorites Favorite[]
+  id             String     @id
+  name           String
+  category       String
+  tags           String
+  allergens      String
+  costBand       Int
+  timeBand       Int
+  isHealthy      Boolean    @default(false)
+  ytQuery        String?
+  cuisineType    String?    // NEW: cuisine type (e.g., Italian, Thai)
+  keyIngredients String?    // NEW: key ingredients as comma-separated string
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  favorites      Favorite[]
 }
 
 model Spin {
