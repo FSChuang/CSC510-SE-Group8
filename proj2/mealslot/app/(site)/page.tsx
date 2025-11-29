@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { SlotMachine } from "@/components/SlotMachine";
 import { PowerUps } from "@/components/PowerUps";
 import FilterMenu from "@/components/FilterMenu";
@@ -9,11 +10,13 @@ import DishCountInput from "@/components/DishCountInput";
 import { Dish, PowerUpsInput, RecipeJSON } from "@/lib/schemas";
 import { cn } from "@/components/ui/cn";
 import Modal from "@/components/ui/Modal";
-import RecipePanel from "@/components/RecipePanel";
 import MapWithPins from "@/components/MapWithPins";
-import VideoPanel, {Video} from "@/components/VideoPanel";
+import VideoPanel, { Video } from "@/components/VideoPanel";
+import GuestModal from "@/components/GuestModal";
 
-
+// -------------------------
+// Types
+// -------------------------
 type Venue = {
   id: string;
   name: string;
@@ -25,7 +28,74 @@ type Venue = {
   distance_km: number;
 };
 
+type User = {
+  name: string;
+};
+
+// -------------------------
+// User Menu Component
+// -------------------------
+function UserMenu({ user, onSignOut }: { user: User; onSignOut: () => void }) {
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
+
+  return (
+    <div className="relative inline-block text-left mb-4">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 rounded-full border px-4 py-2 hover:bg-gray-100 transition"
+      >
+        Hi, {user?.name} ▾
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-2 w-48 origin-top-right rounded-md border bg-white shadow-lg z-50">
+          <ul className="flex flex-col text-sm">
+            <li>
+              <button
+                className="w-full px-4 py-2 text-left hover:bg-gray-100"
+                onClick={() => router.push("/handler/account")}
+              >
+                My Account
+              </button>
+            </li>
+            <li>
+              <button
+                className="w-full px-4 py-2 text-left hover:bg-gray-100"
+                onClick={() => router.push("/handler/saved-meals")}
+              >
+                Saved Meals
+              </button>
+            </li>
+            <li>
+              <button
+                className="w-full px-4 py-2 text-left hover:bg-gray-100"
+                onClick={() => router.push("/handler/preferences")}
+              >
+                Dietary Preferences
+              </button>
+            </li>
+            <li>
+              <button
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 text-red-600"
+                onClick={onSignOut}
+              >
+                Sign Out
+              </button>
+            </li>
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// -------------------------
+// Home Page
+// -------------------------
 function HomePage() {
+  const [user, setUser] = useState<User | null>(null);
+
   const [category, setCategory] = useState<string>("Breakfast");
   const [dishCount, setDishCount] = useState(0);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -37,19 +107,20 @@ function HomePage() {
 
   const [recipes, setRecipes] = useState<RecipeJSON[] | null>(null);
   const [venues, setVenues] = useState<Venue[] | null>(null);
-  const [openRecipeModal, setOpenRecipeModal] = useState(false);
-  const [videosByDish, setVideosByDish] = useState<Record<string, Video[]>>({});
   const [openVideoModal, setOpenVideoModal] = useState(false);
+  const [videosByDish, setVideosByDish] = useState<Record<string, Video[]>>({});
 
-
+  // -------------------------
+  // Cuisines
+  // -------------------------
   const cuisines = useMemo(() => {
-    // Extract the "name" property from each selected item
     const names = selection.map((d) => d.name).filter(Boolean);
-
-    // Fallback list if nothing is selected
     return names.length ? names : ["american", "asian", "italian"];
   }, [selection]);
 
+  // -------------------------
+  // Cooldown timer
+  // -------------------------
   useEffect(() => {
     let t: number | undefined;
     if (cooldownMs > 0) {
@@ -58,22 +129,25 @@ function HomePage() {
     return () => (t ? clearInterval(t) : undefined);
   }, [cooldownMs]);
 
+  // -------------------------
+  // Spin slot machine
+  // -------------------------
   const onSpin = async (locked: { index: number; dishId: string }[]) => {
     setBusy(true);
-    // send categories as an array for backwards compatibility, containing the single selection
     const res = await fetch("/api/spin", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ category, tags: selectedTags, allergens: selectedAllergens, locked, powerups, dishCount })
+      body: JSON.stringify({ category, tags: selectedTags, allergens: selectedAllergens, locked, powerups, dishCount }),
     });
     setBusy(false);
+
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
       alert(`Spin failed: ${j.message ?? res.status}`);
       return;
     }
-    const data = await res.json();
 
+    const data = await res.json();
     setSelection(data.selection);
     setRecipes(null);
     setVenues(null);
@@ -83,10 +157,12 @@ function HomePage() {
     await fetchVideos(data.selection);
   };
 
+  // -------------------------
+  // Fetch Videos
+  // -------------------------
   const fetchVideos = async (dishes: Dish[]) => {
     if (!dishes.length) return;
-
-    const dishNames = dishes.map(d => d.name);
+    const dishNames = dishes.map((d) => d.name);
 
     const res = await fetch("/api/videos", {
       method: "POST",
@@ -102,14 +178,16 @@ function HomePage() {
     }
   };
 
-
+  // -------------------------
+  // Fetch Venues
+  // -------------------------
   const fetchVenues = async (coords?: { lat: number; lng: number }) => {
     const body: any = { cuisines };
     if (coords) {
       body.lat = coords.lat;
       body.lng = coords.lng;
     } else {
-      body.locationHint = "Denver"; // fallback city
+      body.locationHint = "Denver";
     }
 
     const r = await fetch("/api/places", {
@@ -119,25 +197,30 @@ function HomePage() {
     });
 
     const j = await r.json();
-    console.log("API response:", j);
-
-    // Normalize results
     let normalized: any[] = [];
-    if (Array.isArray(j.venues)) {
-      normalized = j.venues;
-    } else if (j.results && typeof j.results === "object") {
-      normalized = Object.values(j.results).flat();
-    } else if (Array.isArray(j)) {
-      normalized = j;
-    }
-
-    console.log("Normalized venues:", normalized);
+    if (Array.isArray(j.venues)) normalized = j.venues;
+    else if (j.results && typeof j.results === "object") normalized = Object.values(j.results).flat();
+    else if (Array.isArray(j)) normalized = j;
     setVenues(normalized);
   };
 
+  // -------------------------
+  // Sign out handler
+  // -------------------------
+  const handleSignOut = () => {
+    localStorage.removeItem("guestUser");
+    setUser(null);
+  };
 
   return (
     <div className="space-y-4">
+      {/* ✅ Guest modal */}
+      <GuestModal onGuest={() => setUser({ name: "Guest" })} />
+
+      {/* ✅ User Menu */}
+      {user && <UserMenu user={user} onSignOut={handleSignOut} />}
+
+      {/* Category selection */}
       <section className="rounded-2xl border bg-white p-4 shadow-sm">
         <h2 className="mb-2 text-lg font-semibold">Choose Category</h2>
         <div className="flex flex-wrap gap-2">
@@ -146,11 +229,7 @@ function HomePage() {
             return (
               <button
                 key={c.toLowerCase()}
-                className={cn(
-                  "rounded-full border px-3 py-1 text-sm",
-                  active ? "bg-neutral-900 text-white" : "bg-white"
-                )}
-                // clicking a different option selects it; clicking the active option will deselect (set to "")
+                className={cn("rounded-full border px-3 py-1 text-sm", active ? "bg-neutral-900 text-white" : "bg-white")}
                 onClick={() => setCategory((prev) => (prev === c.toLowerCase() ? "" : c.toLowerCase()))}
                 aria-pressed={active}
               >
@@ -161,22 +240,11 @@ function HomePage() {
         </div>
       </section>
 
-      <FilterMenu
-        onTagChange={setSelectedTags}
-        onAllergenChange={setSelectedAllergens}
-      />
-
+      <FilterMenu onTagChange={setSelectedTags} onAllergenChange={setSelectedAllergens} />
       <PowerUps value={powerups} onChange={setPowerups} />
-
       <DishCountInput value={dishCount} onChange={setDishCount} />
 
-      <SlotMachine
-        reelCount={dishCount}
-        onSpin={onSpin}
-        cooldownMs={cooldownMs}
-        busy={busy}
-        selection={selection}
-      />
+      <SlotMachine reelCount={dishCount} onSpin={onSpin} cooldownMs={cooldownMs} busy={busy} selection={selection} />
 
       {selection.length > 0 && (
         <section className="rounded-2xl border bg-white p-4 shadow-sm">
@@ -198,18 +266,11 @@ function HomePage() {
               onClick={() => {
                 if ("geolocation" in navigator) {
                   navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                      fetchVenues({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-                    },
-                    (err) => {
-                      console.warn("Geolocation error or denied:", err);
-                      // fallback if denied
-                      fetchVenues();
-                    },
+                    (pos) => fetchVenues({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                    () => fetchVenues(),
                     { maximumAge: 1000 * 60 * 5, timeout: 10000 }
                   );
                 } else {
-                  console.warn("Geolocation not supported");
                   fetchVenues();
                 }
               }}
@@ -220,11 +281,7 @@ function HomePage() {
         </section>
       )}
 
-      <Modal
-        open={openVideoModal && !!videosByDish}
-        title="Cook at Home — Recipes"
-        onClose={() => setOpenVideoModal(false)}
-      >
+      <Modal open={openVideoModal && !!videosByDish} title="Cook at Home — Recipes" onClose={() => setOpenVideoModal(false)}>
         <VideoPanel videosByDish={videosByDish} />
       </Modal>
 
@@ -241,12 +298,7 @@ function HomePage() {
                     {v.cuisine} • {v.price} • {v.rating.toFixed(1)}★ • {v.distance_km} km
                   </div>
                   <div className="text-xs">{v.addr}</div>
-                  <a
-                    className="mt-2 inline-block text-xs underline"
-                    href={v.url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
+                  <a className="mt-2 inline-block text-xs underline" href={v.url} target="_blank" rel="noreferrer">
                     Visit website
                   </a>
                 </div>
@@ -262,5 +314,5 @@ function HomePage() {
   );
 }
 
-// Client-only page to avoid hydration noise from extensions/timers.
+// Client-only page to avoid hydration issues
 export default dynamic(() => Promise.resolve(HomePage), { ssr: false });
