@@ -1,4 +1,6 @@
 // --- path: app/layout.tsx ---
+import { StackProvider, StackTheme } from "@stackframe/stack";
+import { client } from "../stack/client";
 import "./globals.css";
 import type { ReactNode } from "react";
 import ThemeProvider from "@/components/theme-provider";
@@ -34,11 +36,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: noFoucScript }} />
       </head>
-      <body className="min-h-screen bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+      <body className="min-h-screen bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100"><StackProvider app={client}><StackTheme>
         <ThemeProvider>
           {children}
         </ThemeProvider>
-      </body>
+      </StackTheme></StackProvider></body>
     </html>
   );
 }

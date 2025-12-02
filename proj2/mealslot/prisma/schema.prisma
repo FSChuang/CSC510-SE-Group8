@@ -1,4 +1,3 @@
-// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,76 +8,74 @@ datasource db {
 }
 
 model User {
-  id          String       @id @default(cuid())
-  email       String       @unique
+  id          String        @id @default(cuid())
+  email       String        @unique
   name        String
-  provider    String       @default("mock")
-  createdAt   DateTime     @default(now())
+  provider    String        @default("mock")
+  createdAt   DateTime      @default(now())
   favorites   Favorite[]
-  spins       Spin[]
   PartyMember PartyMember[]
+  spins       Spin[]
 }
 
 model Category {
-  id   String @id        // e.g. "main", "veggie"
+  id   String @id
   name String @unique
   tags String
-  // IMPORTANT: no dishes[] field here — keeps Dish.category scalar
 }
 
 model Dish {
-  id        String   @id
-  name      String
-  category  String
-  tags      String
-  allergens String
-  costBand  Int
-  timeBand  Int
-  isHealthy Boolean  @default(false)
-  ytQuery   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // add this line so Favorite.dish has an opposite side
-  favorites Favorite[]
+  id             String     @id
+  name           String
+  category       String
+  tags           String
+  allergens      String
+  costBand       Int
+  timeBand       Int
+  isHealthy      Boolean    @default(false)
+  ytQuery        String?
+  cuisineType    String?    // NEW: cuisine type (e.g., Italian, Thai)
+  keyIngredients String?    // NEW: key ingredients as comma-separated string
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  favorites      Favorite[]
 }
 
 model Spin {
   id            String   @id @default(cuid())
   userId        String?
-  user          User?    @relation(fields: [userId], references: [id])
   reelsJson     String
   lockedJson    String
   resultDishIds String
   powerupsJson  String
   createdAt     DateTime @default(now())
+  user          User?    @relation(fields: [userId], references: [id])
 }
 
 model Party {
-  id              String       @id @default(cuid())
-  code            String       @unique
+  id              String        @id @default(cuid())
+  code            String        @unique
   hostId          String?
-  isActive        Boolean      @default(true)
+  isActive        Boolean       @default(true)
   constraintsJson String
-  createdAt       DateTime     @default(now())
+  createdAt       DateTime      @default(now())
   members         PartyMember[]
 }
 
 model PartyMember {
-  id       String   @id @default(cuid())
-  partyId  String
-  party    Party    @relation(fields: [partyId], references: [id])
-  userId   String?
-  user     User?    @relation(fields: [userId], references: [id])
+  id        String   @id @default(cuid())
+  partyId   String
+  userId    String?
   prefsJson String
-  joinedAt DateTime @default(now())
+  joinedAt  DateTime @default(now())
+  party     Party    @relation(fields: [partyId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
 }
 
 model Favorite {
   id     String @id @default(cuid())
   userId String
-  user   User   @relation(fields: [userId], references: [id])
-
   dishId String
   dish   Dish   @relation(fields: [dishId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 }
