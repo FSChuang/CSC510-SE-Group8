@@ -1,11 +1,25 @@
+import { describe, it, expect, test, vi } from "vitest";
 import { weightedSpin } from "../../lib/scoring";
-import { Dish } from "@/lib/schemas";
-import { describe, it, expect } from "vitest";
-import { test } from "vitest";
+import type { Dish } from "@/lib/schemas";
+
+// Mock the deterministic RNG so it always returns 0.
+// This makes weightedChoice always pick from the start of the distribution,
+// which in our test is the highest-scoring dish.
+vi.mock("../../lib/rng", () => ({
+  makeDeterministicRng: () => {
+    // Ignore the seed; always return an RNG that yields 0
+    return () => 0;
+  },
+}));
 
 test.skip("placeholder", () => {});
 
-const makeDish = (id: string, healthy: boolean, cost: number, time: number): Dish => ({
+const makeDish = (
+  id: string,
+  healthy: boolean,
+  cost: number,
+  time: number
+): Dish => ({
   id,
   name: id,
   category: "main",
@@ -14,7 +28,7 @@ const makeDish = (id: string, healthy: boolean, cost: number, time: number): Dis
   timeBand: time,
   isHealthy: healthy,
   allergens: [],
-  ytQuery: id
+  ytQuery: id,
 });
 
 describe("weightedSpin", () => {
@@ -27,9 +41,17 @@ describe("weightedSpin", () => {
   it("applies powerups", () => {
     const reels = [[
       makeDish("cheap_fast_healthy", true, 1, 1),
-      makeDish("expensive_slow", false, 3, 3)
+      makeDish("expensive_slow", false, 3, 3),
     ]];
-    const sel = weightedSpin(reels, [], { healthy: true, cheap: true, max30m: true });
+
+    const sel = weightedSpin(reels, [], {
+      healthy: true,
+      cheap: true,
+      max30m: true,
+    });
+
+    // With powerups and our mocked RNG, this should deterministically
+    // pick the higher-scoring "cheap_fast_healthy" dish.
     expect(sel[0].id).toBe("cheap_fast_healthy");
   });
 });

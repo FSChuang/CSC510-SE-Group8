@@ -1,6 +1,7 @@
 "use client";
 
 import { StackTheme } from "@stackframe/stack";
+import React from 'react';
 
 export default function StackWrapper() {
     return (

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Modal from "./ui/Modal";
+import React from 'react';
 
 type GuestModalProps = {
     onGuest?: () => void; // callback when user continues as guest
